@@ -4,7 +4,7 @@ A production-grade event and slot booking platform demonstrating full-stack syst
 
 VENUE is built to handle real-world challenges: concurrent bookings, capacity management, role-based access control, and seamless user experiences at scale. Inspired by modern event platforms, it combines backend reliability with frontend polish.
 
-![VENUE Platform - Desktop, Tablet & Mobile Views](venue-design.png)
+<img src="venue-design.png" alt="VENUE Platform - Desktop, Tablet & Mobile Views" width="400" />
 
 ---
 
