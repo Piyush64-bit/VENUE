@@ -1,22 +1,31 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+
 const connectDB = require("./config/db");
+
 const authRoutes = require("./modules/auth/auth.routes");
 const eventRoutes = require("./modules/events/event.routes");
 const bookingRoutes = require("./modules/bookings/booking.routes");
+
 const verifyToken = require("./middlewares/verifyToken");
 const checkRole = require("./middlewares/checkRole");
 
-
-
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+
+// Database
+connectDB();
+
+// Routes
 app.use("/auth", authRoutes);
 app.use("/events", eventRoutes);
 app.use("/bookings", bookingRoutes);
+
+// Test protected route (can remove later)
 app.get(
   "/protected",
   verifyToken,
@@ -29,12 +38,4 @@ app.get(
   }
 );
 
-
-
-const PORT = process.env.PORT || 5000;
-
-connectDB();
-
-app.listen(PORT, () => {
-  console.log(`VENUE backend running on port ${PORT}`);
-});
+module.exports = app;
