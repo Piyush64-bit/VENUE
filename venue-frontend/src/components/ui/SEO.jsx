@@ -1,16 +1,33 @@
-import { Helmet } from 'react-helmet-async';
+import { useEffect } from 'react';
 
 const SEO = ({ title, description, keywords }) => {
-  return (
-    <Helmet>
-      <title>VENUE</title>
-      <meta name="description" content={description} />
-      {keywords && <meta name="keywords" content={keywords} />}
-      <meta property="og:title" content={title || 'VENUE'} />
-      <meta property="og:description" content={description} />
-      <meta property="twitter:card" content="summary_large_image" />
-    </Helmet>
-  );
+  useEffect(() => {
+    // Update Title
+    document.title = title || 'VENUE';
+
+    // Update Meta Description
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.name = "description";
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.content = description || "Your venue for events and movies";
+
+    // Update Keywords (optional)
+    if (keywords) {
+      let metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (!metaKeywords) {
+        metaKeywords = document.createElement('meta');
+        metaKeywords.name = "keywords";
+        document.head.appendChild(metaKeywords);
+      }
+      metaKeywords.content = keywords;
+    }
+
+  }, [title, description, keywords]);
+
+  return null;
 };
 
 export default SEO;

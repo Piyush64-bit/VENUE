@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/layout/Footer';
@@ -68,18 +67,16 @@ function AppContent() {
 
 function App() {
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <ScrollToTop />
-          <AuthProvider>
-            <SmoothScroll>
-              <AppContent />
-            </SmoothScroll>
-          </AuthProvider>
-        </Router>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <ScrollToTop />
+        <AuthProvider>
+          <SmoothScroll>
+            <AppContent />
+          </SmoothScroll>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
