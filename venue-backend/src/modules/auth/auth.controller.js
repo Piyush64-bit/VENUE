@@ -1,74 +1,36 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../users/user.model');
+const authService = require('./auth.service');
+const catchAsync = require('../../utils/catchAsync');
+const ApiResponse = require('../../utils/ApiResponse');
 
-const registerUser = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
+const registerUser = catchAsync(async (req, res, next) => {
+  const { user, token } = await authService.register(req.body);
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+  // Send token in cookie (Consistent with login)
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+  res.status(201).json(
+    new ApiResponse(201, { user, token }, 'User registered successfully')
+  );
+});
 
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'USER',
-    });
+const loginUser = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+  const { user, token } = await authService.login(email, password);
 
-    await user.save();
+  // Send token in cookie
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Registration failed', error: error.message });
-  }
-};
-
-const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Login failed', error: error.message });
-  }
-};
+  res.status(200).json(
+    new ApiResponse(200, { user, token }, 'Login successful')
+  );
+});
 
 module.exports = { registerUser, loginUser };

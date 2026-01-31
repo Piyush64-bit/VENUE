@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./venue-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/venue
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=supersecretkey_change_me_in_prod
+      - FRONTEND_URL=http://localhost:80
+      - NODE_ENV=production
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - venue-network
+
+  frontend:
+    build: ./venue-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - venue-network
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017" # Exposed for local debugging, can remove in prod
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - venue-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379" # Exposed for local debugging
+    networks:
+      - venue-network
+
+networks:
+  venue-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

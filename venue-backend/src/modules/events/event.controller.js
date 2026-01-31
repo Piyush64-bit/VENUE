@@ -1,55 +1,42 @@
-const Event = require("./event.model");
-const Slot = require("../slots/slot.model");
-const generateSlots = require("../../utils/generateSlots");
+const eventService = require('./event.service');
+const catchAsync = require('../../utils/catchAsync');
+const ApiResponse = require('../../utils/ApiResponse');
 
-const createEvent = async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      startDate,
-      endDate,
-      slotDuration,
-      capacityPerSlot,
-    } = req.body;
+const createEvent = catchAsync(async (req, res, next) => {
+  const { event, slots } = await eventService.createEvent(req.body, req.user.userId);
 
-    // 1. Create event
-    const event = await Event.create({
-      title,
-      description,
-      startDate,
-      endDate,
-      organizerId: req.user.userId,
-    });
+  return res.status(201).json(
+    new ApiResponse(201, { event, slots }, "Event and slots created successfully")
+  );
+});
 
-    // 2. Generate slots (plain JS objects)
-    const slots = generateSlots(
-      startDate,
-      endDate,
-      slotDuration,
-      capacityPerSlot
-    );
+const getEvents = catchAsync(async (req, res, next) => {
+  const { events, count } = await eventService.getEvents(req.query);
 
-    // 3. Attach eventId to each slot
-    const slotsWithEvent = slots.map((slot) => ({
-      ...slot,
-      eventId: event._id,
-    }));
+  return res.status(200).json(
+    new ApiResponse(200, { results: count, events }, "Events fetched successfully")
+  );
+});
 
-    // 4. Save slots to DB
-    await Slot.insertMany(slotsWithEvent);
+const getEventById = catchAsync(async (req, res, next) => {
+  const event = await eventService.getEventById(req.params.id);
+  return res.status(200).json(
+    new ApiResponse(200, { event }, "Event fetched successfully")
+  );
+});
 
-    // 5. Response
-    return res.status(201).json({
-      message: "Event and slots created successfully",
-      event,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to create event",
-      error: error.message,
-    });
-  }
-};
+const getEventSlots = catchAsync(async (req, res, next) => {
+  const slots = await eventService.getEventSlots(req.params.id);
+  return res.status(200).json(
+    new ApiResponse(200, { slots }, "Slots fetched successfully")
+  );
+});
 
-module.exports = { createEvent };
+const getOrganizerEvents = catchAsync(async (req, res, next) => {
+  const events = await eventService.getEventsByOrganizer(req.user.userId);
+  return res.status(200).json(
+    new ApiResponse(200, { results: events.length, events }, "Organizer events fetched successfully")
+  );
+});
+
+module.exports = { createEvent, getEvents, getEventById, getEventSlots, getOrganizerEvents };

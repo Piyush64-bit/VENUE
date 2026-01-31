@@ -22,6 +22,9 @@ const bookingSchema = new mongoose.Schema(
       enum: ["CONFIRMED", "CANCELLED"],
       default: "CONFIRMED",
     },
+    seats: [{
+      label: String
+    }]
   },
   { timestamps: true }
 );

@@ -1,35 +1,86 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Suspense } from 'react';
+import { BrowserRouter as Router, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Navbar from './components/Navbar';
+import Footer from './components/layout/Footer';
+import NotificationToast from './components/NotificationToast';
+import ParticleBackground from './components/ParticleBackground';
+import { GlobalErrorBoundary } from './components/ui/GlobalErrorBoundary';
+import ScrollToTop from './components/layout/ScrollToTop';
+import SmoothScroll from './components/layout/SmoothScroll';
+import AppRoutes from './routes/AppRoutes';
 
-function App() {
-  const [count, setCount] = useState(0)
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-bgPrimary" />
+  );
+}
+
+function Layout() {
+  const location = useLocation();
+  const isLanding = location.pathname === '/';
+  
+  // focused paths where we hide nav/footer
+  const isFocusedFlow = location.pathname.includes('/slots') || location.pathname.includes('/seats') || location.pathname.includes('/checkout');
+
+  return (
+    <div className="min-h-screen bg-bgPrimary text-textPrimary font-sans selection:bg-accentOrange selection:text-white">
+      {!isFocusedFlow && <Navbar />}
+      <NotificationToast />
+      <main className={`min-h-screen w-full ${isLanding || isFocusedFlow ? '' : 'pt-24 px-6 md:px-0 max-w-[1200px] mx-auto'}`}>
+        <GlobalErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <AppRoutes />
+          </Suspense>
+        </GlobalErrorBoundary>
+      </main>
+      {!isFocusedFlow && <Footer />}
+    </div>
+  );
+}
+
+function AppContent() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-bgPrimary" />;
+  }
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <ParticleBackground />
+      <Layout />
     </>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <ScrollToTop />
+          <AuthProvider>
+            <SmoothScroll>
+              <AppContent />
+            </SmoothScroll>
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
+    </HelmetProvider>
+  );
+}
+
+export default App;
