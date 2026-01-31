@@ -57,11 +57,6 @@ app.use("/bookings", apiLimiter); // Protect booking logic
 // Database
 connectDB();
 
-// Connection Check
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date(), uptime: process.uptime() });
-});
-
 // Routes
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
