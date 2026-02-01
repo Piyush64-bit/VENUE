@@ -35,7 +35,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://venue-plum.vercel.app"
+      "https://venueapp.vercel.app"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
