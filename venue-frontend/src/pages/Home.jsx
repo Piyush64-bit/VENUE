@@ -159,13 +159,13 @@ const Home = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10"
+            className="relative z-10 flex flex-col items-start gap-10"
           >
              {/* Glass Status Pill Greeting */}
              <motion.div
                initial={{ opacity: 0, y: -10 }}
                animate={{ opacity: 1, y: 0 }}
-               className="mb-8 inline-flex px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md items-center gap-2"
+               className="inline-flex px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md items-center gap-2"
              >
                 <div className="w-1.5 h-1.5 rounded-full bg-accentOrange animate-pulse" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -173,7 +173,7 @@ const Home = () => {
                 </span>
              </motion.div>
              
-             <div className="text-[15vw] md:text-[8vw] leading-[0.85] font-black tracking-tighter text-white mb-8 drop-shadow-2xl">
+             <div className="text-[11vw] md:text-[8vw] leading-tight font-black tracking-tighter text-white mb-8 drop-shadow-2xl">
                 <AnimatedText text="DISCOVER" />
                 <span className="text-white/20 select-none block">THE UNSEEN</span>
              </div>
@@ -218,7 +218,7 @@ const Home = () => {
               <span className="text-sm text-textMuted hidden md:inline-block">Handpicked for you</span>
            </div>
            
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[600px]">
               {/* Profile / Stats Block */}
               <div className="col-span-1 md:col-span-1 bg-bgCard border border-white/5 rounded-3xl p-8 flex flex-col justify-between group hover:border-accentOrange/20 transition-colors">
                   <div>
@@ -237,7 +237,7 @@ const Home = () => {
               <motion.div 
                 whileHover={{ scale: 0.98 }}
                 onClick={() => setActiveCategory('Music')}
-                className={`col-span-1 md:col-span-2 relative group overflow-hidden rounded-3xl cursor-pointer ${activeCategory === 'Music' ? 'ring-2 ring-accentOrange' : ''}`}
+                className={`col-span-1 md:col-span-2 relative group overflow-hidden rounded-3xl cursor-pointer ${activeCategory === 'Music' ? 'ring-2 ring-accentOrange' : ''} min-h-[200px]`}
               >
                   <img src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=1200" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Nightlife" />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
@@ -280,31 +280,58 @@ const Home = () => {
                ))
              ) : (
                featuredEvents.map((event) => (
-                 <div key={event._id} className="min-w-[350px] md:min-w-[450px] snap-center h-[550px]">
-                   <Spotlight className="h-full bg-bgCard border border-white/5 rounded-3xl p-3 hover:border-accentOrange/30 transition-colors group">
-                      <div className="relative h-[60%] rounded-2xl overflow-hidden mb-4">
+                 <div key={event._id} className="min-w-[85vw] md:min-w-[450px] snap-center h-[500px] md:h-[550px]">
+                   <Spotlight className="h-full bg-bgCard border border-white/5 rounded-3xl p-0 md:p-3 hover:border-accentOrange/30 transition-colors group relative overflow-hidden">
+                      {/* Image Section */}
+                      <div className="absolute inset-0 md:relative md:h-[60%] md:rounded-2xl overflow-hidden md:mb-4">
                         <img 
                           src={event.image} 
                           alt={event.title} 
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                          className="w-full h-full object-cover grayscale-0 md:grayscale group-hover:grayscale-0 transition-all duration-700"
                         />
-                        {/* Dynamic Selling Fast Badge (Random logic for demo) */}
-                        {Math.random() > 0.5 && (
-                           <div className="absolute top-4 left-4 bg-red-500/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg animate-pulse">
-                              🔥 Selling Fast
-                           </div>
-                        )}
-                        <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/20">
-                           {new Date(event.date).getDate()} {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                        
+                        {/* Badges */}
+                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                            {Math.random() > 0.5 && (
+                               <div className="bg-red-500/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg animate-pulse self-start">
+                                   🔥 Selling Fast
+                               </div>
+                            )}
+                            <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 self-start md:hidden">
+                               {event.category}
+                            </div>
                         </div>
+
+                         {/* Desktop Date Badge (Positioned relative to image container on desktop) */}
+                         <div className="hidden md:flex absolute top-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/20">
+                            {new Date(event.date).getDate()} {new Date(event.date).toLocaleString('default', { month: 'short' })}
+                         </div>
                       </div>
-                      <div className="px-2">
-                         <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-accentOrange transition-colors">{event.title}</h3>
-                         <p className="text-textMuted line-clamp-2">{event.description}</p>
-                         <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
-                           <span className="text-white font-medium">₹{event.price}</span>
-                           <Link to={`/event/${event._id}`} className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-accentOrange hover:text-white transition-colors">
-                             <ArrowUpRight className="w-5 h-5" />
+
+                      {/* Content Section (Overlay on Mobile, Block on Desktop) */}
+                      <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent md:relative md:inset-auto md:bg-none md:p-2 z-20">
+                         {/* Mobile Date */}
+                         <div className="mb-2 md:hidden">
+                           <span className="text-accentOrange font-bold text-xs uppercase tracking-wider">
+                               {new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric'})}
+                           </span>
+                         </div>
+
+                         <div className="flex justify-between items-end gap-4">
+                             <div className="flex-1">
+                                 <h3 className="text-3xl md:text-2xl font-black text-white mb-2 uppercase leading-none md:leading-tight group-hover:text-accentOrange transition-colors drop-shadow-xl md:drop-shadow-none">
+                                   {event.title}
+                                 </h3>
+                                 <p className="text-white/80 md:text-textMuted line-clamp-2 text-sm md:text-base mb-4 md:mb-0 max-w-[90%]">
+                                   {event.description}
+                                 </p>
+                             </div>
+                         </div>
+
+                         <div className="mt-2 md:mt-6 flex items-center justify-between md:border-t md:border-white/5 md:pt-4">
+                           <span className="text-white font-bold text-xl md:text-base">₹{event.price}</span>
+                           <Link to={`/event/${event._id}`} className="w-12 h-12 md:w-10 md:h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-accentOrange hover:text-white transition-colors shadow-lg">
+                             <ArrowUpRight className="w-6 h-6 md:w-5 md:h-5" />
                            </Link>
                          </div>
                       </div>
@@ -330,7 +357,7 @@ const Home = () => {
                     // ... Skeletons
                     [...Array(4)].map((_, i) => (<Skeleton key={i} className="h-[300px] rounded-2xl" />))
                 ) : filteredUpcoming.length > 0 ? (
-                  filteredUpcoming.map((event) => (
+                  filteredUpcoming.slice(0, 8).map((event) => (
                     <Spotlight key={event._id} className="bg-transparent border-0 group">
                        <Link to={`/event/${event._id}`}>
                            <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">

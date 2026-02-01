@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 import SEO from '../components/ui/SEO';
 
-import Hero3D from '../components/visuals/Hero3D';
+
 import Marquee from '../components/visuals/Marquee';
 import NoiseOverlay from '../components/visuals/NoiseOverlay';
 import MagneticButton from '../components/visuals/MagneticButton';
@@ -76,7 +76,7 @@ const Landing = () => {
         keywords="jaipur events, concerts, movies, booking, venue"
       />
       <NoiseOverlay />
-      <Hero3D />
+
 
       {/* Hero Section */}
       <section className="relative h-screen flex flex-col justify-end md:justify-center items-center overflow-hidden bg-gradient-to-b from-bgPrimary via-[#0F0F16] to-[#000000]">

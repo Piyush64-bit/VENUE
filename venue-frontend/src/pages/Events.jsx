@@ -3,12 +3,12 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'fra
 import { useQuery } from '@tanstack/react-query';
 import { Search, Grid, List, MapPin, ArrowUpRight } from 'lucide-react';
 
-import Tilt from 'react-parallax-tilt';
+
 import api from '../api/axios';
 import { Skeleton } from '../components/ui/Skeleton';
 import SEO from '../components/ui/SEO';
 import NoiseOverlay from '../components/visuals/NoiseOverlay';
-import TorchEffect from '../components/visuals/TorchEffect';
+
 import VelocityText from '../components/visuals/VelocityText';
 import TextReveal from '../components/visuals/TextReveal';
 import EventDetailsModal from '../components/ui/EventDetailsModal';
@@ -68,7 +68,7 @@ const Events = () => {
     if (sortBy === 'price_asc') result.sort((a, b) => a.price - b.price);
     if (sortBy === 'price_desc') result.sort((a, b) => b.price - a.price);
     if (sortBy === 'date_desc') result.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return result;
+    return result.slice(0, 11);
   }, [events, searchTerm, selectedCategory, sortBy]);
 
   const { scrollY } = useScroll();
@@ -77,10 +77,10 @@ const Events = () => {
   const searchWidth = useTransform(scrollY, [0, 200], ["100%", "120%"]);
 
   return (
-    <div className="min-h-screen bg-bgPrimary pb-32 text-textPrimary selection:bg-accentOrange selection:text-white relative cursor-default">
+    <div className="min-h-screen bg-bgPrimary pb-32 text-textPrimary selection:bg-accentOrange selection:text-white relative cursor-default overflow-x-hidden">
       <SEO title="Explore Events" description="Find your next experience in Jaipur." />
       <NoiseOverlay />
-      <TorchEffect />
+
 
       <AnimatePresence>
         {viewMode === 'list' && hoveredEvent && (
@@ -102,7 +102,7 @@ const Events = () => {
 
       <div className="pt-32 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
         <motion.div style={{ scale: titleScale, opacity: titleOpacity }} className="origin-left">
-          <div className="text-6xl md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
+          <div className="text-[11vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
              <TextReveal delay={0.1}>The</TextReveal>
              <TextReveal delay={0.3} className="text-accentOrange">Collection</TextReveal>
           </div>
@@ -196,17 +196,14 @@ const Events = () => {
                         // Hero Card with 3D Tilt
                         if (isHero) {
                             return (
-                                <Tilt
+                                <motion.div
                                     key={event._id}
-                                    tiltMaxAngleX={5}
-                                    tiltMaxAngleY={5}
-                                    perspective={1000}
-                                    scale={1.02}
-                                    transitionSpeed={1000}
+                                    whileHover={{ scale: 1.02 }}
+                                    transition={{ duration: 0.3 }}
                                     className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] md:aspect-[2/1] cursor-pointer`}
                                     onClick={() => setSelectedEvent(event)}
                                 >
-                                    <motion.div className="w-full h-full">
+                                    <div className="w-full h-full">
                                     <img src={event.image} alt={event.title} className="w-full h-full object-cover transition-transform duration-700" />
                                     <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                                     <div className="absolute inset-0 p-12 flex flex-col justify-end">
@@ -216,8 +213,8 @@ const Events = () => {
                                          <h3 className="text-6xl font-black text-white uppercase leading-none mb-4 tracking-tight drop-shadow-xl">{event.title}</h3>
                                          <p className="text-white/90 text-xl max-w-2xl font-medium">{event.description}</p>
                                     </div>
-                                    </motion.div>
-                                </Tilt>
+                                    </div>
+                                </motion.div>
                             );
                         }
 

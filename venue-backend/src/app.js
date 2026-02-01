@@ -13,6 +13,7 @@ const authRoutes = require("./modules/auth/auth.routes");
 const eventRoutes = require("./modules/events/event.routes");
 const bookingRoutes = require("./modules/bookings/booking.routes");
 const movieRoutes = require("./modules/movies/movie.routes");
+const userRoutes = require("./modules/users/user.routes");
 
 const verifyToken = require("./middlewares/verifyToken");
 const checkRole = require("./middlewares/checkRole");
@@ -81,6 +82,8 @@ apiV1.use("/auth", apiLimiter, authRoutes);
 apiV1.use("/events", publicLimiter, eventRoutes);
 apiV1.use("/movies", publicLimiter, movieRoutes);
 apiV1.use("/bookings", apiLimiter, bookingRoutes);
+console.log("Mounting User Routes...");
+apiV1.use("/users", apiLimiter, userRoutes);
 
 app.use("/api/v1", apiV1);
 
@@ -111,7 +114,7 @@ app.get(
 ====================================================== */
 
 app.get("/", (req, res) => {
-  res.send("VENUE API is running 🚀");
+  res.send("VENUE API [UPDATED] 🚀");
 });
 
 /* ======================================================

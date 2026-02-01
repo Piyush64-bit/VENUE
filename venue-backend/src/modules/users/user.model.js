@@ -20,6 +20,24 @@ const userSchema = new mongoose.Schema(
       enum: ['ADMIN', 'ORGANIZER', 'USER'],
       default: 'USER',
     },
+    favorites: [
+      {
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          refPath: 'itemType'
+        },
+        itemType: {
+          type: String,
+          required: true,
+          enum: ['Event', 'Movie']
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

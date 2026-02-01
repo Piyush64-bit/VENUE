@@ -5,10 +5,11 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/layout/Footer';
 import NotificationToast from './components/NotificationToast';
-import ParticleBackground from './components/ParticleBackground';
+
 import { GlobalErrorBoundary } from './components/ui/GlobalErrorBoundary';
 import ScrollToTop from './components/layout/ScrollToTop';
-import SmoothScroll from './components/layout/SmoothScroll';
+import BottomNav from './components/layout/BottomNav';
+
 import AppRoutes from './routes/AppRoutes';
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ function Layout() {
         </GlobalErrorBoundary>
       </main>
       {!isFocusedFlow && <Footer />}
+      {!isFocusedFlow && <BottomNav />}
     </div>
   );
 }
@@ -59,7 +61,6 @@ function AppContent() {
 
   return (
     <>
-      <ParticleBackground />
       <Layout />
     </>
   );
@@ -71,9 +72,7 @@ function App() {
       <Router>
         <ScrollToTop />
         <AuthProvider>
-          <SmoothScroll>
             <AppContent />
-          </SmoothScroll>
         </AuthProvider>
       </Router>
     </QueryClientProvider>

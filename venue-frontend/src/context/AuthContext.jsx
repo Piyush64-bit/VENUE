@@ -81,8 +81,28 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const toggleFavorite = async (itemId, itemType) => {
+    if (!user) return; // Should handle auth check in UI
+    try {
+        const response = await api.post('/users/favorites', { itemId, itemType });
+        const updatedFavorites = response.data.data.favorites;
+        
+        const updatedUser = { ...user, favorites: updatedFavorites };
+        setUser(updatedUser);
+        localStorage.setItem('venue_user', JSON.stringify(updatedUser)); // Persist
+        
+        const action = response.data.data.action;
+        showToast(action === 'added' ? 'Added to favorites' : 'Removed from favorites', 'success');
+        return true;
+    } catch (error) {
+        console.error("Favorite toggle failed", error);
+        showToast(error.response?.data?.message || 'Failed to update favorites', 'error');
+        return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, toggleFavorite }}>
       {children}
     </AuthContext.Provider>
   );

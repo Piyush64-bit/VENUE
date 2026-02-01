@@ -224,79 +224,10 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Toggle */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 text-textMuted hover:text-white"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {isOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+
       </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#050505]/95 backdrop-blur-3xl border-b border-white/10 overflow-hidden shadow-2xl"
-          >
-            {/* Cyber Accent Line */}
-            <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-accentOrange to-transparent opacity-50" />
-            
-            <div className="px-6 py-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className="text-base font-medium text-textMuted hover:text-white transition-colors"
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <div className="h-px bg-white/5 my-2" />
-              {user ? (
-                <>
-                  <div className="flex items-center gap-3 mb-2">
-                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accentOrange to-purple-600 flex items-center justify-center text-white font-bold text-xs">
-                          {user.name.charAt(0)}
-                       </div>
-                       <div>
-                          <p className="text-sm font-bold text-white max-w-[150px] truncate">{user.name}</p>
-                       </div>
-                  </div>
-                  <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-3 text-sm text-textMuted hover:text-white py-2">
-                      <LayoutDashboard className="w-4 h-4" /> Dashboard
-                  </Link>
-                  <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-3 text-sm text-textMuted hover:text-white py-2">
-                      <Ticket className="w-4 h-4" /> My Wallet
-                  </Link>
-                  <Button onClick={handleLogout} variant="ghost" className="justify-start px-0 text-red-400 hover:bg-transparent hover:text-red-300">
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <Link to="/login" onClick={() => setIsOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start px-0">Login</Button>
-                  </Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)}>
-                    <Button variant="primary" className="w-full">Get Started</Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
     </nav>
   );
 };

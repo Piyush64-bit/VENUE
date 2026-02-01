@@ -3,9 +3,22 @@ import { X, Calendar, MapPin, Clock, Star, Heart, ArrowRight } from 'lucide-reac
 import { Button } from './Button';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 const EventDetailsModal = ({ isOpen, onClose, item, type = 'event' }) => {
   const navigate = useNavigate();
+  const { user, toggleFavorite } = useAuth();
+  
+  const isFavorited = user?.favorites?.some(fav => fav.itemId === item._id);
+
+  const handleFavorite = (e) => {
+      e.stopPropagation();
+      if (!user) {
+          navigate('/login');
+          return;
+      }
+      toggleFavorite(item._id, type === 'movie' ? 'Movie' : 'Event');
+  };
 
   // Close on escape key
   useEffect(() => {
@@ -139,8 +152,11 @@ const EventDetailsModal = ({ isOpen, onClose, item, type = 'event' }) => {
                         <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                     
-                    <button className="p-4 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-accentOrange/50 hover:text-accentOrange transition-all group">
-                        <Heart className="w-6 h-6 group-hover:fill-accentOrange/20" />
+                    <button 
+                        onClick={handleFavorite}
+                        className={`p-4 rounded-xl border transition-all group ${isFavorited ? 'bg-accentOrange/10 border-accentOrange text-accentOrange' : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-accentOrange/50 hover:text-accentOrange'}`}
+                    >
+                        <Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : 'group-hover:fill-accentOrange/20'}`} />
                     </button>
                 </div>
 

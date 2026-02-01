@@ -3,12 +3,12 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'fra
 import { useQuery } from '@tanstack/react-query';
 import { Search, Grid, List, Play, Star, ArrowUpRight } from 'lucide-react';
 
-import Tilt from 'react-parallax-tilt';
+
 import api from '../api/axios';
 import { Skeleton } from '../components/ui/Skeleton';
 import SEO from '../components/ui/SEO';
 import NoiseOverlay from '../components/visuals/NoiseOverlay';
-import TorchEffect from '../components/visuals/TorchEffect';
+
 import VelocityText from '../components/visuals/VelocityText';
 import TextReveal from '../components/visuals/TextReveal';
 import EventDetailsModal from '../components/ui/EventDetailsModal';
@@ -64,7 +64,7 @@ const Movies = () => {
     }
     if (sortBy === 'rating_desc') result.sort((a, b) => b.rating - a.rating);
     if (sortBy === 'date_desc') result.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
-    return result;
+    return result.slice(0, 11);
   }, [movies, searchTerm, selectedGenre, sortBy]);
 
   const { scrollY } = useScroll();
@@ -73,10 +73,10 @@ const Movies = () => {
   const searchWidth = useTransform(scrollY, [0, 200], ["100%", "120%"]);
 
   return (
-    <div className="min-h-screen bg-bgPrimary pb-32 text-textPrimary selection:bg-accentOrange selection:text-white relative cursor-default">
+    <div className="min-h-screen bg-bgPrimary pb-32 text-textPrimary selection:bg-accentOrange selection:text-white relative cursor-default overflow-x-hidden">
       <SEO title="Now Showing" description="Discover the latest movies." />
       <NoiseOverlay />
-      <TorchEffect />
+
 
       <AnimatePresence>
         {viewMode === 'list' && hoveredMovie && (
@@ -98,7 +98,7 @@ const Movies = () => {
 
       <div className="pt-32 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
         <motion.div style={{ scale: titleScale, opacity: titleOpacity }} className="origin-left">
-           <div className="text-6xl md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
+           <div className="text-[12vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
              <TextReveal delay={0.1}>Now</TextReveal>
              <TextReveal delay={0.3} className="text-accentOrange">Showing</TextReveal>
           </div>
@@ -149,13 +149,13 @@ const Movies = () => {
 
       <div className="px-6 max-w-[1400px] mx-auto min-h-[50vh]">
          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-[2/3] rounded-sm" />)}
             </div>
          ) : (
             <AnimatePresence mode="popLayout">
                {processedMovies.length > 0 ? (
-                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6' : 'flex flex-col gap-0'}>
+                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-0'}>
                     {processedMovies.map((movie, index) => {
                         const isHero = viewMode === 'grid' && index === 0;
                         const colSpanClass = isHero ? 'md:col-span-2 lg:col-span-2' : '';
@@ -194,17 +194,14 @@ const Movies = () => {
 
                         if (isHero) {
                             return (
-                                <Tilt
+                                <motion.div
                                     key={movie._id}
-                                    tiltMaxAngleX={5}
-                                    tiltMaxAngleY={5}
-                                    perspective={1000}
-                                    scale={1.02}
-                                    transitionSpeed={1000}
+                                    whileHover={{ scale: 1.02 }}
+                                    transition={{ duration: 0.3 }}
                                     className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] lg:aspect-[2.35/1] cursor-pointer`}
                                     onClick={() => setSelectedMovie(movie)}
                                 >
-                                    <motion.div className="w-full h-full">
+                                    <div className="w-full h-full">
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-transform duration-700 object-top" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                                     <div className="absolute inset-0 p-12 flex flex-col justify-end">
@@ -215,8 +212,8 @@ const Movies = () => {
                                          <h3 className="text-7xl font-black text-white uppercase leading-none mb-4 tracking-tight drop-shadow-xl">{movie.title}</h3>
                                          <p className="text-white/80 text-xl max-w-2xl font-medium line-clamp-2">{movie.description}</p>
                                     </div>
-                                    </motion.div>
-                                </Tilt>
+                                    </div>
+                                </motion.div>
                             );
                         }
 
@@ -227,28 +224,26 @@ const Movies = () => {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.4, delay: index * 0.05 }}
-                                className="group relative bg-bgCard overflow-hidden rounded-2xl aspect-[2/3] cursor-pointer" 
+                                className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[4/5] cursor-pointer`}
                                 onClick={() => setSelectedMovie(movie)}
                             >
                                 <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                                 
                                 <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                                    <div className="flex justify-between items-start opacity-0 group-hover:opacity-100 transition-opacity transform -translate-y-2 group-hover:translate-y-0 duration-300">
+                                    <div className="flex justify-between items-start">
                                         <span className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-xs font-bold uppercase rounded-full border border-white/10">{movie.genre}</span>
-                                        <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-lg">
-                                            <Play className="w-3 h-3 fill-current ml-0.5" />
+                                        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                                            <Play className="w-4 h-4 fill-current ml-0.5" />
                                         </div>
                                     </div>
-                                    
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2 text-accentOrange">
-                                            <Star className="w-4 h-4 fill-current" />
-                                            <span className="font-bold text-sm">{movie.rating}</span>
+                                        <div className="flex items-center gap-2 mb-1 text-accentOrange uppercase tracking-wider text-sm font-bold">
+                                            <Star className="w-3 h-3 fill-current" />
+                                            <span>{movie.rating} / 5</span>
                                         </div>
-                                        <h3 className="text-2xl font-bold text-white uppercase leading-none mb-2">{movie.title}</h3>
-                                        <div className="h-[1px] w-full bg-white/20 my-3 origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                                        <p className="text-white/60 text-xs line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity delay-100">{movie.description}</p>
+                                        <h3 className="text-2xl font-bold text-white uppercase leading-none mb-3">{movie.title}</h3>
+                                        <p className="text-white/60 text-sm line-clamp-1">{movie.runtime} • {new Date(movie.releaseDate).getFullYear()}</p>
                                     </div>
                                 </div>
                             </motion.div>
