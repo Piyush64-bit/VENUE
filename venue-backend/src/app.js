@@ -31,17 +31,31 @@ const app = express();
 
 app.use(helmet());
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : [];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://venue-plum.vercel.app"
-    ],
+    origin: (origin, callback) => {
+
+      // allow server-to-server / curl / mobile requests
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("Blocked by CORS:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 app.use(express.json());
 app.use(cookieParser());
@@ -114,7 +128,7 @@ app.get(
 ====================================================== */
 
 app.get("/", (req, res) => {
-  res.send("VENUE API [UPDATED] 🚀");
+  res.send("VENUE API HERE");
 });
 
 /* ======================================================
