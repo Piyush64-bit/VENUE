@@ -105,10 +105,12 @@ const Home = () => {
     queryKey: ['events'],
     queryFn: async () => {
       const response = await api.get('/events');
-      return response.data.data.events;
+      return response.data?.data?.events || response.data?.events || [];
     },
     staleTime: 1000 * 60 * 5, 
   });
+
+
 
   // Dynamic Greeting based on time
   const getGreeting = () => {
@@ -142,11 +144,13 @@ const Home = () => {
 
       {/* Mobile Animated Aurora Background */}
       <motion.div 
+          style={{ willChange: "transform, opacity" }}
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-accentOrange/20 blur-[100px] rounded-full pointer-events-none md:hidden z-0" 
       />
       <motion.div 
+          style={{ willChange: "transform, opacity" }}
           animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.4, 0.2], x: [-20, 20, -20] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           className="absolute top-32 left-1/2 -translate-x-1/2 w-[250px] h-[250px] bg-purple-600/20 blur-[100px] rounded-full pointer-events-none md:hidden z-0" 
@@ -239,7 +243,7 @@ const Home = () => {
                 onClick={() => setActiveCategory('Music')}
                 className={`col-span-1 md:col-span-2 relative group overflow-hidden rounded-3xl cursor-pointer ${activeCategory === 'Music' ? 'ring-2 ring-accentOrange' : ''} min-h-[200px]`}
               >
-                  <img src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=1200" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Nightlife" />
+                  <img src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=1200" width="800" height="600" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Nightlife" />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                   <div className="absolute bottom-8 left-8">
                      <span className="px-3 py-1 bg-accentOrange text-white text-xs font-bold uppercase tracking-wider rounded-full mb-3 inline-block">Trending</span>
@@ -255,7 +259,7 @@ const Home = () => {
                     onClick={() => setActiveCategory(cat.name)}
                     className={`relative group overflow-hidden rounded-3xl cursor-pointer ${i === 0 || i === 3 ? 'md:col-span-2' : 'md:col-span-1'} h-[200px] ${activeCategory === cat.name ? 'ring-2 ring-accentOrange' : ''}`}
                 >
-                   <img src={cat.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={cat.name} />
+                   <img src={cat.image} width="400" height="300" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={cat.name} />
                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors" />
                    <div className="absolute bottom-6 left-6">
                       <h3 className="text-2xl font-bold text-white">{cat.name}</h3>
@@ -287,6 +291,9 @@ const Home = () => {
                         <img 
                           src={event.image} 
                           alt={event.title} 
+                          width="450"
+                          height="350"
+                          loading="lazy"
                           className="w-full h-full object-cover grayscale-0 md:grayscale group-hover:grayscale-0 transition-all duration-700"
                         />
                         
@@ -343,6 +350,8 @@ const Home = () => {
         </div>
       </section>
 
+
+
       {/* Upcoming Grid (Filtered) */}
       <section className="px-6 mb-24">
          <div className="max-w-[1400px] mx-auto min-h-[400px]">
@@ -358,15 +367,9 @@ const Home = () => {
                     [...Array(4)].map((_, i) => (<Skeleton key={i} className="h-[300px] rounded-2xl" />))
                 ) : filteredUpcoming.length > 0 ? (
                   filteredUpcoming.slice(0, 8).map((event) => (
-                    <Spotlight key={event._id} className="bg-transparent border-0 group">
-                       <Link to={`/event/${event._id}`}>
-                           <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">
-                              <img src={event.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={event.title} />
-                           </div>
-                           <h4 className="text-lg font-bold text-white mb-1 group-hover:text-accentOrange transition-colors">{event.title}</h4>
-                           <p className="text-sm text-textMuted">{new Date(event.date).toLocaleDateString()}</p>
-                       </Link>
-                    </Spotlight>
+                    <div key={event._id} className="h-full">
+                       <EventCard event={event} />
+                    </div>
                   ))
                 ) : (
                   <div className="col-span-full py-24 text-center text-textMuted">

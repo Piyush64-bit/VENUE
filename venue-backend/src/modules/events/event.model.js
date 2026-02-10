@@ -26,6 +26,10 @@ const eventSchema = new mongoose.Schema(
 			type: String,
 			default: 'ACTIVE',
 		},
+		isPublished: {
+			type: Boolean,
+			default: false,
+		},
 		// Phase 8 Details
 		image: {
 			type: String,
@@ -51,6 +55,11 @@ const eventSchema = new mongoose.Schema(
 // Indexes for performance
 eventSchema.index({ price: 1, location: 1 }); // Composite index for common filters
 eventSchema.index({ startDate: 1 }); // For date sorting/filtering
+
+// Indexes for common queries
+eventSchema.index({ isPublished: 1, startDate: 1 }); // Public feed sorted by date
+eventSchema.index({ organizerId: 1, createdAt: -1 }); // Organizer dashboard
+eventSchema.index({ location: 1 }); // Filtering by location
 
 module.exports = mongoose.model('Event', eventSchema);
 

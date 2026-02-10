@@ -5,7 +5,12 @@ const Booking = require('./booking.model');
 const Slot = require('../slots/slot.model');
 const Waitlist = require('../waitlist/waitlist.model');
 const Event = require('../events/event.model');
+const User = require('../users/user.model');
+const ApiResponse = require('../../utils/ApiResponse');
 
+/**
+ * BOOK SLOT (Quantity-based)
+ */
 /**
  * BOOK SLOT (Quantity-based)
  */
@@ -15,13 +20,37 @@ const bookSlot = catchAsync(async (req, res, next) => {
 
   try {
     const { slotId, quantity = 1 } = req.body;
-    const userId = req.user.userId; // Provided by verifyToken
+    const userId = req.user.userId;
 
     if (quantity < 1) {
       throw new AppError("Quantity must be at least 1", 400);
     }
 
-    // 1. Prevent duplicate booking
+    if (!mongoose.Types.ObjectId.isValid(slotId)) {
+      throw new AppError(`Invalid slotId: ${slotId}`, 400);
+    }
+
+    // 1. Fetch Slot with Parent for Validation
+    // We need to check if the parent (Event/Movie) is PUBLISHED.
+    const slotCheck = await Slot.findById(slotId).session(session);
+
+    if (!slotCheck) {
+      throw new AppError("Slot not found", 404);
+    }
+
+    // Dynamic populate based on parentType
+    if (slotCheck.parentType === 'Event') {
+      await slotCheck.populate('parentId');
+    } else if (slotCheck.parentType === 'Movie') {
+      await slotCheck.populate('parentId');
+    }
+
+    // Check if parent exists and is published
+    if (!slotCheck.parentId || !slotCheck.parentId.isPublished) {
+      throw new AppError("Event/Movie is not active or available for booking", 404);
+    }
+
+    // 2. Prevent duplicate booking (User Logic)
     const existingBooking = await Booking.findOne({
       userId,
       slotId,
@@ -32,23 +61,21 @@ const bookSlot = catchAsync(async (req, res, next) => {
       throw new AppError("You have already booked this slot", 400);
     }
 
-    // 2. Atomic capacity check + decrement
-    // We pass the session to ensure this happens within the transaction
+    // 3. Atomic capacity check + decrement
+    // Use availableSeats instead of remainingCapacity
     const slot = await Slot.findOneAndUpdate(
       {
         _id: slotId,
-        remainingCapacity: { $gte: quantity },
+        availableSeats: { $gte: quantity },
       },
       {
-        $inc: { remainingCapacity: -quantity },
+        $inc: { availableSeats: -quantity },
       },
       { new: true, session }
     );
 
-    // 3. Slot full? -> Add to Waitlist (Logic simplification: If slot update failed, we check waitlist)
+    // 4. Slot full? -> Add to Waitlist
     if (!slot) {
-      // Check concurrency again or just proceed to waitlist logic
-      // Note: Waitlist operations are ALSO inside the transaction for safety
       const alreadyWaitlisted = await Waitlist.findOne({
         slotId,
         "users.userId": userId,
@@ -64,53 +91,57 @@ const bookSlot = catchAsync(async (req, res, next) => {
 
       await session.commitTransaction();
 
-      // Socket event (Fire after commit)
+      // Socket event
       const io = req.app.get("io");
-      io.to(userId.toString()).emit("waitlist:added", {
-        slotId,
-        quantity,
-        message: "You have been added to the waitlist",
-      });
+      if (io) {
+        io.to(userId.toString()).emit("waitlist:added", {
+          slotId,
+          quantity,
+          message: "You have been added to the waitlist",
+        });
+      }
 
       return res.status(200).json({
         message: "Slot full or insufficient capacity. Added to waitlist.",
       });
     }
 
-    // 4. Update Slot Status if needed
-    if (slot.remainingCapacity === 0) {
+    // 5. Update Slot Status if needed
+    if (slot.availableSeats === 0) {
       slot.status = "FULL";
       await slot.save({ session });
     }
 
-    // 5. Create Booking
-    const booking = await Booking.create([{
+    // 6. Create Booking
+    const [booking] = await Booking.create([{
       userId,
       slotId,
       quantity,
-      seats: req.body.seats || [], // Save seats if provided
+      seats: req.body.seats || [],
       status: "CONFIRMED",
     }], { session });
 
     await session.commitTransaction();
 
-    return res.status(201).json({
-      status: 'success',
-      message: "Booking confirmed",
-      data: { booking: booking[0] },
-    });
+    // Send Email Asynchronously (don't block response)
+    // TODO: Implement email service
+    // const user = await User.findById(userId);
+    // emailService.sendBookingConfirmation(user, booking[0], slot, parent).catch(err => {
+    //   console.error("Failed to send email", err);
+    // });
+
+    res.status(201).json(new ApiResponse(201, booking[0], 'Booking created successfully'));
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     throw error;
   } finally {
     session.endSession();
   }
 });
 
-/**
- * CANCEL BOOKING + PROMOTE WAITLIST
- */
 /**
  * CANCEL BOOKING + PROMOTE WAITLIST
  */
@@ -140,11 +171,11 @@ const cancelBooking = catchAsync(async (req, res, next) => {
     // 3. Restore capacity
     const slot = await Slot.findByIdAndUpdate(
       booking.slotId,
-      { $inc: { remainingCapacity: booking.quantity } },
+      { $inc: { availableSeats: booking.quantity } },
       { new: true, session }
     );
 
-    if (slot.remainingCapacity > 0) {
+    if (slot.availableSeats > 0) {
       slot.status = "AVAILABLE";
       await slot.save({ session });
     }
@@ -156,10 +187,8 @@ const cancelBooking = catchAsync(async (req, res, next) => {
     let nextUser = null;
 
     if (waitlist && waitlist.users.length > 0) {
-      // Find the first user whose quantity fits the available capacity
-      // This prevents "head-of-line blocking" where a large request blocks smaller ones
       const userIndex = waitlist.users.findIndex(
-        (u) => u.quantity <= slot.remainingCapacity
+        (u) => u.quantity <= slot.availableSeats
       );
 
       if (userIndex !== -1) {
@@ -167,23 +196,24 @@ const cancelBooking = catchAsync(async (req, res, next) => {
 
         // Deduct capacity again
         const updatedSlot = await Slot.findOneAndUpdate(
-          { _id: slot._id, remainingCapacity: { $gte: nextUser.quantity } },
-          { $inc: { remainingCapacity: -nextUser.quantity } },
+          { _id: slot._id, availableSeats: { $gte: nextUser.quantity } },
+          { $inc: { availableSeats: -nextUser.quantity } },
           { new: true, session }
         );
 
         if (updatedSlot) {
           // Create Booking for promoted user
-          const newBooking = await Booking.create([{
+          const [newBooking] = await Booking.create([{
             userId: nextUser.userId,
             slotId: slot._id,
             quantity: nextUser.quantity,
             status: "CONFIRMED",
           }], { session });
-          promotedBooking = newBooking[0];
+
+          promotedBooking = newBooking;
 
           // Update Slot status
-          if (updatedSlot.remainingCapacity === 0) {
+          if (updatedSlot.availableSeats === 0) {
             updatedSlot.status = "FULL";
             await updatedSlot.save({ session });
           }
@@ -202,9 +232,9 @@ const cancelBooking = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
 
-    // Socket events (after commit)
+    // Socket events
     const io = req.app.get("io");
-    if (promotedBooking && nextUser) {
+    if (io && promotedBooking && nextUser) {
       io.to(nextUser.userId.toString()).emit("waitlist:promoted", {
         slotId: slot._id,
         bookingId: promotedBooking._id,
@@ -225,7 +255,9 @@ const cancelBooking = catchAsync(async (req, res, next) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     throw error;
   } finally {
     session.endSession();
@@ -238,19 +270,17 @@ const getMyBookings = catchAsync(async (req, res, next) => {
   const bookings = await Booking.find({ userId })
     .populate({
       path: 'slotId',
-      select: 'startTime endTime date eventId',
+      select: 'startTime endTime date parentId parentType',
       populate: {
-        path: 'eventId',
-        select: 'title location'
+        path: 'parentId',
+        select: 'title location image poster'
       }
     })
     .sort({ createdAt: -1 });
 
-  res.status(200).json({
-    status: 'success',
-    results: bookings.length,
-    bookings
-  });
+  return res.status(200).json(
+    new ApiResponse(200, { bookings, count: bookings.length }, "User bookings fetched successfully")
+  );
 });
 
 const getOrganizerBookings = catchAsync(async (req, res, next) => {

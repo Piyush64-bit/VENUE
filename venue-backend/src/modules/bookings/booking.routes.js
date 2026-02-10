@@ -35,21 +35,28 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *               - eventId
  *               - slotId
- *               - tickets
  *             properties:
- *               eventId:
- *                 type: string
  *               slotId:
  *                 type: string
- *               tickets:
+ *               quantity:
  *                 type: integer
+ *                 default: 1
+ *               seats:
+ *                 type: array
+ *                 items:
+ *                   type: object
  *     responses:
  *       201:
  *         description: Booking successful
+ *       200:
+ *         description: Added to Waitlist (Slot full)
  *       400:
- *         description: Bad request
+ *         description: Bad request / Invalid input
+ *       404:
+ *         description: Slot not found OR Parent (Event/Movie) not published
+ *       409:
+ *         description: Conflict (Duplicate booking)
  *       401:
  *         description: Unauthorized
  */
@@ -84,10 +91,15 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
+const validateId = require("../../middlewares/validateId");
+
+// ... (rest of code)
+
 router.patch(
   "/:id/cancel",
   verifyToken,
   checkRole(["USER"]),
+  validateId('id'),
   cancelBooking
 );
 

@@ -23,10 +23,16 @@ const bookingSchema = new mongoose.Schema(
       default: "CONFIRMED",
     },
     seats: [{
-      label: String
+      type: String,
+      required: true
     }]
   },
   { timestamps: true }
 );
+
+// Indexes
+bookingSchema.index({ userId: 1, createdAt: -1 }); // User history
+bookingSchema.index({ slotId: 1, status: 1 }); // Slot capacity/duplication checks
+bookingSchema.index({ userId: 1, slotId: 1, status: 1 }); // Duplicate booking prevention
 
 module.exports = mongoose.model("Booking", bookingSchema);

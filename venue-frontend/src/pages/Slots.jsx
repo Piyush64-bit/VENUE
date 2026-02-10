@@ -5,7 +5,7 @@ import api from '../api/axios';
 import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
-const Slots = () => {
+const Slots = ({ type = 'event' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
@@ -14,57 +14,42 @@ const Slots = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
+  const isMovie = type === 'movie';
+  const detailEndpoint = isMovie ? `/movies/${id}` : `/events/${id}`;
+  const slotsEndpoint = isMovie ? `/movies/${id}/slots` : `/events/${id}/slots`;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [eventRes, slotsRes] = await Promise.all([
-          api.get(`/events/${id}`).catch(() => ({ data: { 
-            title: "Mock Event Title", 
-            image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000",
-            location: "Venue Main Hall",
-            duration: "2h 30m"
-          }})), 
-          api.get(`/events/${id}/slots`).catch(() => ({ data: [] }))
+        const [detailRes, slotsRes] = await Promise.all([
+          api.get(detailEndpoint),
+          api.get(slotsEndpoint)
         ]);
         
-        setEvent(eventRes.data.data.event);
+        const detailData = detailRes.data?.data || detailRes.data || {};
+        const slotsData = slotsRes.data?.data || slotsRes.data || {};
+
+        setEvent(isMovie ? (detailData.movie || detailData) : (detailData.event || detailData));
         
-        // Mock Data Fallback
-        const fetchedSlots = slotsRes.data.data.slots || [];
+        const fetchedSlots = slotsData.slots || [];
+        setSlots(fetchedSlots);
         
-        if (fetchedSlots.length === 0) {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const mockSlots = [
-                { _id: '1', startTime: new Date(today.setHours(10,0,0)).toISOString(), endTime: new Date(today.setHours(12,0,0)).toISOString(), capacity: 100, booked: 20 },
-                { _id: '2', startTime: new Date(today.setHours(14,0,0)).toISOString(), endTime: new Date(today.setHours(16,0,0)).toISOString(), capacity: 100, booked: 80 },
-                { _id: '3', startTime: new Date(today.setHours(18,0,0)).toISOString(), endTime: new Date(today.setHours(20,0,0)).toISOString(), capacity: 100, booked: 100 }, // Full
-                { _id: '4', startTime: new Date(tomorrow.setHours(10,0,0)).toISOString(), endTime: new Date(tomorrow.setHours(12,0,0)).toISOString(), capacity: 100, booked: 0 },
-                { _id: '5', startTime: new Date(tomorrow.setHours(14,0,0)).toISOString(), endTime: new Date(tomorrow.setHours(16,0,0)).toISOString(), capacity: 100, booked: 45 },
-            ];
-            setSlots(mockSlots);
-            
-            // Set default date
-            const dates = [...new Set(mockSlots.map(s => new Date(s.startTime).toDateString()))];
-            setSelectedDate(dates[0]);
-        } else {
-            setSlots(fetchedSlots);
-            if (fetchedSlots.length > 0) {
-               const dates = [...new Set(fetchedSlots.map(s => new Date(s.startTime).toDateString()))];
-               setSelectedDate(dates[0]);
-            }
+        if (fetchedSlots.length > 0) {
+           const dates = [...new Set(fetchedSlots.map(s => new Date(s.startTime).toDateString()))];
+           setSelectedDate(dates[0]);
         }
 
       } catch (error) {
         console.error("Failed to load data", error);
+        if (error.response?.status === 404) {
+            setEvent(null); // Will show "Item not found"
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, detailEndpoint, slotsEndpoint, isMovie]);
 
   // Group slots by date
   const slotsByDate = useMemo(() => {
@@ -81,18 +66,18 @@ const Slots = () => {
 
   const handleContinue = () => {
     if (selectedSlot) {
-        navigate(`/event/${id}/seats`, { state: { slot: selectedSlot } });
+        navigate(isMovie ? `/movie/${id}/seats` : `/event/${id}/seats`, { state: { slot: selectedSlot } });
     }
   };
 
   if (loading) return <div className="min-h-screen bg-bgPrimary flex items-center justify-center"><div className="w-8 h-8 border-2 border-accentOrange rounded-full animate-spin border-t-transparent" /></div>;
-  if (!event) return <div className="min-h-screen flex items-center justify-center text-white">Event not found</div>;
+  if (!event) return <div className="min-h-screen flex items-center justify-center text-white">Item not found</div>;
 
   return (
     <div className="min-h-screen bg-bgPrimary pb-24 relative overflow-hidden">
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0">
-         <img src={event.image} alt="" className="w-full h-[60vh] object-cover opacity-20 blur-3xl" />
+         <img src={isMovie ? event.poster : event.image} alt="" className="w-full h-[60vh] object-cover opacity-20 blur-3xl" />
          <div className="absolute inset-0 bg-gradient-to-b from-bgPrimary/80 via-bgPrimary to-bgPrimary" />
       </div>
 
@@ -104,7 +89,7 @@ const Slots = () => {
            className="mb-12"
         >
            <button 
-             onClick={() => navigate(`/event/${id}`)}
+             onClick={() => navigate(isMovie ? `/movie/${id}` : `/event/${id}`)}
              className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-6 group"
            >
               <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-white/10">
@@ -211,7 +196,7 @@ const Slots = () => {
                  <p className="text-2xl font-bold text-white gap-2 flex items-baseline">
                     {selectedSlot ? (
                         <>
-                           <span className="text-accentOrange">$25.00</span>
+                           <span className="text-accentOrange">{event.price ? `₹${event.price}` : 'Free'}</span>
                            <span className="text-sm font-normal text-white/40">/ person</span>
                         </>
                     ) : (

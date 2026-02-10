@@ -12,8 +12,10 @@ const { apiLimiter, publicLimiter } = require("./middlewares/rateLimiter");
 const authRoutes = require("./modules/auth/auth.routes");
 const eventRoutes = require("./modules/events/event.routes");
 const bookingRoutes = require("./modules/bookings/booking.routes");
+const slotRoutes = require("./modules/slots/slot.routes");
 const movieRoutes = require("./modules/movies/movie.routes");
 const userRoutes = require("./modules/users/user.routes");
+const organizerRoutes = require("./modules/organizer/organizer.routes"); // [NEW]
 
 const verifyToken = require("./middlewares/verifyToken");
 const checkRole = require("./middlewares/checkRole");
@@ -46,7 +48,6 @@ app.use(
         return callback(null, true);
       }
 
-      console.log("Blocked by CORS:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
 
@@ -96,7 +97,23 @@ apiV1.use("/auth", apiLimiter, authRoutes);
 apiV1.use("/events", publicLimiter, eventRoutes);
 apiV1.use("/movies", publicLimiter, movieRoutes);
 apiV1.use("/bookings", apiLimiter, bookingRoutes);
-console.log("Mounting User Routes...");
+apiV1.use("/slots", publicLimiter, slotRoutes);
+
+// Serve uploaded files with proper CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+}, express.static('uploads'));
+
+apiV1.use("/organizer", organizerRoutes);
 apiV1.use("/users", apiLimiter, userRoutes);
 
 app.use("/api/v1", apiV1);

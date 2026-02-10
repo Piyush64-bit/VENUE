@@ -1,10 +1,10 @@
-# VENUE 🎟️
+# VENUE 
 
-A production-grade event and slot booking platform demonstrating full-stack system design, robust backend engineering, and modern frontend architecture.
+A production-grade event and movie booking platform demonstrating full-stack system design, robust backend engineering, and modern frontend architecture.
 
 VENUE is built to handle real-world challenges: concurrent bookings, capacity management, role-based access control, and seamless user experiences at scale. Inspired by modern event platforms, it combines backend reliability with frontend polish.
 
-<img src="venue-design.png" alt="VENUE Platform - Desktop, Tablet & Mobile Views" width="400" />
+
 
 ---
 
@@ -13,7 +13,7 @@ VENUE is built to handle real-world challenges: concurrent bookings, capacity ma
 ### Backend Engineering
 - **JWT-based Authentication** – Secure, stateless authentication with token-based access
 - **Role-Based Access Control** – Multi-tier permissions (Admin, Organizer, User) with fine-grained authorization checks
-- **Organizer-Only Event Creation** – Restricted event management with validation and authorization middleware
+- **Organizer Portal** – Dedicated dashboard for event creation, image uploads, and management
 - **Automatic Slot Generation** – Intelligent slot scheduling algorithm for event time windows
 - **Concurrency-Safe Booking System** – Race condition handling, atomic operations, and capacity constraints
 - **Waitlist Management** – Graceful handling of full slots with automatic promotion logic
@@ -21,9 +21,15 @@ VENUE is built to handle real-world challenges: concurrent bookings, capacity ma
 
 ### Frontend Experience
 - **React-Based UI** – Component-driven, scalable frontend architecture
+- **Organizer Dashboard** – Comprehensive interface for managing events and bookings
 - **Responsive & Intuitive Design** – Mobile-first approach with smooth, predictable interactions
-- **Planned 3D Immersion** – Integration of Three.js for immersive visual elements and enhanced user engagement
 - **Performance-Focused** – Optimized asset loading, efficient state management, and smooth animations
+
+---
+
+## Architecture
+
+For a deep dive into the system architecture, tech stack, and design decisions, please read [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -48,45 +54,22 @@ VENUE is built to handle real-world challenges: concurrent bookings, capacity ma
 
 ### Frontend
 - **Framework**: React
-- **Styling**: Responsive CSS/UI framework
-- **3D Graphics**: Three.js (planned)
-- **State Management**: React hooks / Context API
+- **Styling**: TailwindCSS / Responsive Design
+- **State Management**: React Query / Context API
 
 ---
 
 ## Project Structure
 
-```
-VENUE/
-├── venue-backend/                 # Express.js API server
-│   ├── src/
-│   │   ├── app.js                # Express application setup
-│   │   ├── config/
-│   │   │   └── db.js            # MongoDB connection
-│   │   ├── middlewares/
-│   │   │   ├── checkRole.js      # Role-based authorization
-│   │   │   └── verifyToken.js    # JWT verification
-│   │   ├── modules/              # Feature modules
-│   │   │   ├── auth/             # Authentication endpoints
-│   │   │   ├── events/           # Event management
-│   │   │   ├── bookings/         # Booking logic & concurrency
-│   │   │   ├── slots/            # Slot generation & management
-│   │   │   └── users/            # User profiles
-│   │   └── utils/
-│   │       └── generateSlots.js  # Slot algorithm
-│   └── package.json
-└── venue-frontend/                # React frontend application
-    ├── src/
-    ├── package.json
-```
+See [ARCHITECTURE.md](./ARCHITECTURE.md#4-directory-structure) for the detailed directory structure.
 
 ---
 
 ## Current Status
 
-✅ **Backend**: Core API complete with authentication, authorization, and booking logic  
-🚀 **Frontend**: React scaffold in place; UI development in progress  
-📋 **Next Phase**: Enhanced UX with animations, 3D integration, and performance optimization
+✅ **Backend**: Core API complete, including Auth, RBAC, Bookings, and modular Organizer features  
+🚀 **Frontend**: Main user flows and Organizer Portal fully implemented  
+📋 **Next Phase**: Enhanced UX with animations and performance optimization
 
 ---
 

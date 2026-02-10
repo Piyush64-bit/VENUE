@@ -10,6 +10,15 @@ const movieSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        organizer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+        isPublished: {
+            type: Boolean,
+            default: false,
+        },
         poster: {
             type: String,
             required: true,
@@ -27,6 +36,12 @@ const movieSchema = new mongoose.Schema(
             type: String, // e.g. "2h 30m"
             required: true,
         },
+        price: {
+            type: Number,
+            required: true,
+            default: 250, // Standard movie ticket price
+            min: 0
+        },
         releaseDate: {
             type: Date,
             required: true,
@@ -39,5 +54,10 @@ const movieSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+// Indexes
+movieSchema.index({ isPublished: 1, releaseDate: -1 }); // Public feed
+movieSchema.index({ organizer: 1, createdAt: -1 }); // Organizer dashboard
+movieSchema.index({ title: 'text' }); // Search
 
 module.exports = mongoose.model('Movie', movieSchema);

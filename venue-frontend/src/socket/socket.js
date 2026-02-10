@@ -13,4 +13,8 @@ const getSocketUrl = () => {
 
 export const socket = io(getSocketUrl(), {
     autoConnect: false,
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    timeout: 10000,
 });

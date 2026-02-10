@@ -11,9 +11,11 @@ const Bookings = () => {
 
   const fetchBookings = async () => {
     try {
-      const response = await api.get('/bookings/my-bookings'); // Ensure correct endpoint!
-      console.log("Bookings API Response:", response.data);
-      setBookings(response.data.bookings || []);
+      const response = await api.get('/bookings/my-bookings');
+
+      // Handle standardized ApiResponse (data.data.bookings) or legacy (data.bookings)
+      const fetchedBookings = response.data?.data?.bookings || response.data?.bookings || [];
+      setBookings(fetchedBookings);
     } catch (error) {
       console.error("Failed to fetch bookings", error);
     } finally {
@@ -43,26 +45,30 @@ const Bookings = () => {
 
       {bookings.length > 0 ? (
         <div className="space-y-6">
-          {bookings.map((booking) => (
-             <motion.div 
-               key={booking._id}
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-             >
-                <Card className="flex flex-col md:flex-row gap-6 p-6">
-                   <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden flex-shrink-0">
-                      <img 
-                        src={booking.slotId?.eventId?.image || 'https://via.placeholder.com/200'} 
-                        alt="Event" 
-                        className="w-full h-full object-cover"
-                      />
-                   </div>
-                   
-                   <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                         <div className="flex justify-between items-start">
-                            {/* Fix Access Path: booking.slotId.eventId.title */}
-                            <h3 className="text-xl font-bold text-white mb-2">{booking.slotId?.eventId?.title || 'Event Name'}</h3>
+          {bookings.map((booking) => {
+            // Helper to get title/image from event OR movie
+            const getItem = (slot) => slot?.eventId || slot?.movieId || {};
+            const item = getItem(booking.slotId);
+
+            return (
+ <motion.div 
+   key={booking._id}
+   initial={{ opacity: 0, y: 10 }}
+   animate={{ opacity: 1, y: 0 }}
+ >
+    <Card className="flex flex-col md:flex-row gap-6 p-6">
+       <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden flex-shrink-0">
+          <img 
+            src={item.image || item.poster || 'https://via.placeholder.com/200'} 
+            alt={item.title || 'Event'} 
+            className="w-full h-full object-cover"
+          />
+       </div>
+       
+       <div className="flex-1 flex flex-col justify-between">
+          <div>
+             <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold text-white mb-2">{item.title || 'Unknown Event'}</h3>
                             <span className={`px-2 py-1 rounded text-xs uppercase font-bold tracking-wide ${
                                 booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-500' : // backend returns UPPERCASE
                                 booking.status === 'CANCELLED' ? 'bg-red-500/20 text-red-500' :
@@ -95,7 +101,7 @@ const Bookings = () => {
                    </div>
                 </Card>
              </motion.div>
-          ))}
+          )})}
         </div>
       ) : (
         <div className="text-center py-20 bg-bgCard/30 rounded-xl border border-borderSubtle border-dashed">

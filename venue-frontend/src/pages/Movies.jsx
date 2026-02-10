@@ -12,6 +12,7 @@ import NoiseOverlay from '../components/visuals/NoiseOverlay';
 import VelocityText from '../components/visuals/VelocityText';
 import TextReveal from '../components/visuals/TextReveal';
 import EventDetailsModal from '../components/ui/EventDetailsModal';
+import EventCard from '../components/EventCard';
 
 const GENRES = ['All', 'Sci-Fi', 'Biography', 'Action', 'Drama', 'Horror', 'Romance'];
 const SORT_OPTIONS = [
@@ -45,7 +46,7 @@ const Movies = () => {
     queryKey: ['movies'],
     queryFn: async () => {
       const response = await api.get('/movies');
-      return response.data;
+      return response.data?.data?.movies || response.data?.movies || [];
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -84,10 +85,10 @@ const Movies = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            style={{ x: mouseX, y: mouseY, top: -150, left: 20 }}
+            style={{ x: mouseX, y: mouseY, top: -150, left: 20, willChange: "transform" }}
             className="fixed z-50 pointer-events-none w-[200px] h-[300px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl hidden md:block"
           >
-            <img src={hoveredMovie.poster} alt="" className="w-full h-full object-cover" />
+            <img src={hoveredMovie.poster} alt="" width="200" height="300" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/20" />
             <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">
                {hoveredMovie.rating} / 5
@@ -96,9 +97,9 @@ const Movies = () => {
         )}
       </AnimatePresence>
 
-      <div className="pt-32 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
+      <div className="pt-20 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
         <motion.div style={{ scale: titleScale, opacity: titleOpacity }} className="origin-left">
-           <div className="text-[12vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
+           <div className="text-[8vw] md:text-[5vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
              <TextReveal delay={0.1}>Now</TextReveal>
              <TextReveal delay={0.3} className="text-accentOrange">Showing</TextReveal>
           </div>
@@ -158,7 +159,16 @@ const Movies = () => {
                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-0'}>
                     {processedMovies.map((movie, index) => {
                         const isHero = viewMode === 'grid' && index === 0;
-                        const colSpanClass = isHero ? 'md:col-span-2 lg:col-span-2' : '';
+                        const colSpanClass = isHero ? 'md:col-span-2 lg:col-span-2' : 'col-span-1';
+
+                        // Normalize movie data for EventCard
+                        const normalizedMovie = {
+                            ...movie,
+                            image: movie.poster,
+                            category: movie.genre,
+                            startDate: movie.releaseDate,
+                            location: null // Movies don't have location, we show runtime
+                        };
 
                         if (viewMode === 'list') {
                             return (
@@ -192,61 +202,78 @@ const Movies = () => {
                             )
                         }
 
+                        // Hero Card with Premium Design (Matching Events.jsx)
                         if (isHero) {
                             return (
                                 <motion.div
                                     key={movie._id}
-                                    whileHover={{ scale: 1.02 }}
-                                    transition={{ duration: 0.3 }}
-                                    className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] lg:aspect-[2.35/1] cursor-pointer`}
+                                    whileHover={{ y: -8 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] md:aspect-[2/1] cursor-pointer border border-borderSubtle hover:border-accentOrange/40 hover:shadow-2xl hover:shadow-accentOrange/10 transition-all duration-500`}
                                     onClick={() => setSelectedMovie(movie)}
                                 >
-                                    <div className="w-full h-full">
-                                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-transform duration-700 object-top" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                                    <div className="absolute inset-0 p-12 flex flex-col justify-end">
-                                         <div className="flex gap-4 mb-4">
-                                            <span className="px-4 py-2 bg-accentOrange text-white text-sm font-bold uppercase rounded-full tracking-wider">Now Showing</span>
-                                            <span className="px-4 py-2 bg-white/10 backdrop-blur-md text-white text-sm font-bold uppercase rounded-full border border-white/20">{movie.genre}</span>
-                                         </div>
-                                         <h3 className="text-7xl font-black text-white uppercase leading-none mb-4 tracking-tight drop-shadow-xl">{movie.title}</h3>
-                                         <p className="text-white/80 text-xl max-w-2xl font-medium line-clamp-2">{movie.description}</p>
-                                    </div>
+                                    <div className="w-full h-full flex flex-col md:flex-row">
+                                        {/* Image Section (60%) */}
+                                        <div className="md:w-3/5 h-2/3 md:h-full relative overflow-hidden">
+                                            <motion.img 
+                                                src={movie.poster} 
+                                                alt={movie.title} 
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 object-top"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+                                            
+                                            <div className="absolute top-4 left-4">
+                                                <span className="px-4 py-1.5 bg-accentOrange text-white text-xs font-bold uppercase rounded-full tracking-wider shadow-lg">Now Showing</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Content Section (40%) */}
+                                        <div className="md:w-2/5 p-6 flex flex-col justify-center bg-bgCard border-l border-white/5 relative overflow-hidden">
+                                            {/* Glow Effect */}
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-accentOrange/5 rounded-full blur-3xl pointer-events-none" />
+
+                                            <div className="mb-3 flex items-center gap-2">
+                                                 <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-accentOrange uppercase tracking-wide">
+                                                    {movie.genre}
+                                                 </span>
+                                                 <div className="flex items-center gap-1 text-accentOrange text-xs font-bold">
+                                                    <Star className="w-3 h-3 fill-current" />
+                                                    <span>{movie.rating}</span>
+                                                 </div>
+                                            </div>
+
+                                            <h3 className="text-2xl md:text-3xl font-black text-white uppercase leading-none mb-3 group-hover:text-accentOrange transition-colors line-clamp-2">
+                                                {movie.title}
+                                            </h3>
+                                            
+                                            <p className="text-textMuted text-sm line-clamp-2 mb-4 leading-relaxed">
+                                                {movie.description}
+                                            </p>
+
+                                            <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-textMuted uppercase tracking-wider">Tickets from</span>
+                                                    <span className="text-xl font-bold text-white">₹{movie.price || 250}</span>
+                                                </div>
+                                                
+                                                <motion.div 
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="w-10 h-10 rounded-full bg-accentOrange flex items-center justify-center text-white shadow-lg shadow-accentOrange/20"
+                                                >
+                                                    <ArrowUpRight className="w-5 h-5" />
+                                                </motion.div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             );
                         }
 
                         return (
-                            <motion.div 
-                                key={movie._id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.4, delay: index * 0.05 }}
-                                className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[4/5] cursor-pointer`}
-                                onClick={() => setSelectedMovie(movie)}
-                            >
-                                <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-                                
-                                <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                                    <div className="flex justify-between items-start">
-                                        <span className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-xs font-bold uppercase rounded-full border border-white/10">{movie.genre}</span>
-                                        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                                            <Play className="w-4 h-4 fill-current ml-0.5" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1 text-accentOrange uppercase tracking-wider text-sm font-bold">
-                                            <Star className="w-3 h-3 fill-current" />
-                                            <span>{movie.rating} / 5</span>
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-white uppercase leading-none mb-3">{movie.title}</h3>
-                                        <p className="text-white/60 text-sm line-clamp-1">{movie.runtime} • {new Date(movie.releaseDate).getFullYear()}</p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                            <div key={movie._id} className={`${colSpanClass} h-full`}>
+                                <EventCard event={normalizedMovie} type="movie" />
+                            </div>
                         );
                     })}
                  </div>

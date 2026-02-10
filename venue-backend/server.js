@@ -10,7 +10,10 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+      : "http://localhost:5173",
+    credentials: true,
   },
 });
 

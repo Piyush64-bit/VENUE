@@ -16,11 +16,22 @@ const Slots = lazy(() => import('../pages/Slots'));
 const Seats = lazy(() => import('../pages/Seats'));
 const Checkout = lazy(() => import('../pages/Checkout'));
 const Confirmation = lazy(() => import('../pages/Confirmation'));
-const Bookings = lazy(() => import('../pages/Bookings'));
+// Organizer Pages
+const OrganizerDashboard = lazy(() => import('../pages/organizer/Dashboard'));
+const OrganizerLogin = lazy(() => import('../pages/organizer/OrganizerLogin'));
+const OrganizerRegister = lazy(() => import('../pages/organizer/OrganizerRegister'));
+const OrganizerEvents = lazy(() => import('../pages/organizer/OrganizerEvents'));
+const OrganizerMovies = lazy(() => import('../pages/organizer/OrganizerMovies'));
+const EventForm = lazy(() => import('../pages/organizer/EventForm'));
+const MovieForm = lazy(() => import('../pages/organizer/MovieForm'));
+const SlotManager = lazy(() => import('../pages/organizer/SlotManager'));
+const OrganizerSettings = lazy(() => import('../pages/organizer/OrganizerSettings'));
 const Profile = lazy(() => import('../pages/Profile'));
+const Bookings = lazy(() => import('../pages/Bookings'));
 const Settings = lazy(() => import('../pages/Settings'));
 const Favorites = lazy(() => import('../pages/Favorites'));
 const NotFound = lazy(() => import('../pages/NotFound'));
+const OrganizerNotFound = lazy(() => import('../pages/organizer/OrganizerNotFound'));
 
 const AppRoutes = () => {
   return (
@@ -34,22 +45,38 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
+      {/* Public Pages */}
       <Route path="/events" element={<Events />} />
       <Route path="/movies" element={<Movies />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/event/:id" element={<EventDetails />} />
-      <Route path="/event/:id/slots" element={<Slots />} />
-      <Route path="/event/:id/seats" element={<Seats />} />
-      
-      {/* Protected Routes */}
-      <Route path="/event/:id/checkout" element={
+      <Route path="/profile" element={
         <ProtectedRoute>
-          <Checkout />
+            <Profile />
         </ProtectedRoute>
       } />
-      <Route path="/event/:id/confirmation" element={
+      
+      {/* Detail & Booking Flows */}
+      <Route path="/event/:id" element={<EventDetails type="event" />} />
+      <Route path="/event/:id/slots" element={<Slots type="event" />} />
+      <Route path="/event/:id/seats" element={<Seats />} />
+
+      <Route path="/movie/:id" element={<EventDetails type="movie" />} />
+      <Route path="/movie/:id/slots" element={<Slots type="movie" />} />
+      <Route path="/movie/:id/seats" element={<Seats type="movie" />} />
+      
+      <Route path="/event/:id/checkout" element={
         <ProtectedRoute>
-          <Confirmation />
+          <Checkout type="event" />
+        </ProtectedRoute>
+      } />
+       <Route path="/movie/:id/checkout" element={
+        <ProtectedRoute>
+          <Checkout type="movie" />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/confirmation" element={
+        <ProtectedRoute>
+           <Confirmation />
         </ProtectedRoute>
       } />
       <Route path="/bookings" element={
@@ -67,6 +94,74 @@ const AppRoutes = () => {
           <Favorites />
         </ProtectedRoute>
       } />
+
+      {/* Organizer Auth Routes (Public) */}
+      <Route path="/organizer/login" element={<OrganizerLogin />} />
+      <Route path="/organizer/register" element={<OrganizerRegister />} />
+
+      {/* Organizer Routes */}
+      <Route path="/organizer" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <OrganizerDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/dashboard" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <OrganizerDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/settings" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <OrganizerSettings />
+        </ProtectedRoute>
+      } />
+      
+      {/* Organizer Event Routes */}
+      <Route path="/organizer/events" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <OrganizerEvents />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/events/new" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <EventForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/events/:id/edit" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <EventForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/events/:id/slots" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <SlotManager type="event" />
+        </ProtectedRoute>
+      } />
+
+      {/* Organizer Movie Routes */}
+      <Route path="/organizer/movies" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <OrganizerMovies />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/movies/new" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <MovieForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/movies/:id/edit" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <MovieForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/organizer/movies/:id/slots" element={
+        <ProtectedRoute allowedRoles={['ORGANIZER']}>
+          <SlotManager type="movie" />
+        </ProtectedRoute>
+      } />
+
+      {/* Organizer 404 - Catch all organizer routes */}
+      <Route path="/organizer/*" element={<OrganizerNotFound />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

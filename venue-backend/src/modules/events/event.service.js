@@ -81,8 +81,19 @@ const getEventById = async (id) => {
   return event;
 };
 
-const getEventSlots = async (eventId) => {
-  const slots = await Slot.find({ eventId });
+const getEventSlots = async (eventId, activeOnly = false) => {
+  let query = { eventId };
+
+  if (activeOnly) {
+    query = {
+      ...query,
+      remainingCapacity: { $gt: 0 },
+      // Optional: Filter out past slots
+      // startTime: { $gte: new Date() } // Depends on date/time format stored
+    };
+  }
+
+  const slots = await Slot.find(query).sort({ date: 1, startTime: 1 });
   return slots;
 };
 

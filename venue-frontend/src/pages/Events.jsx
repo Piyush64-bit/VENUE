@@ -11,7 +11,9 @@ import NoiseOverlay from '../components/visuals/NoiseOverlay';
 
 import VelocityText from '../components/visuals/VelocityText';
 import TextReveal from '../components/visuals/TextReveal';
+
 import EventDetailsModal from '../components/ui/EventDetailsModal';
+import EventCard from '../components/EventCard';
 
 const CATEGORIES = ['All', 'Music', 'Comedy', 'Workshops', 'Theatre', 'Meetups'];
 const SORT_OPTIONS = [
@@ -47,7 +49,7 @@ const Events = () => {
     queryKey: ['events'],
     queryFn: async () => {
       const response = await api.get('/events?limit=100');
-      return response.data?.data?.events || [];
+      return response.data?.data?.events || response.data?.events || [];
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -67,7 +69,7 @@ const Events = () => {
     }
     if (sortBy === 'price_asc') result.sort((a, b) => a.price - b.price);
     if (sortBy === 'price_desc') result.sort((a, b) => b.price - a.price);
-    if (sortBy === 'date_desc') result.sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (sortBy === 'date_desc') result.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
     return result.slice(0, 11);
   }, [events, searchTerm, selectedCategory, sortBy]);
 
@@ -88,21 +90,21 @@ const Events = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            style={{ x: mouseX, y: mouseY, top: -150, left: 20 }}
+            style={{ x: mouseX, y: mouseY, top: -150, left: 20, willChange: "transform" }}
             className="fixed z-50 pointer-events-none w-[300px] h-[200px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl hidden md:block"
           >
-            <img src={hoveredEvent.image} alt="" className="w-full h-full object-cover" />
+            <img src={hoveredEvent.image} alt="" width="300" height="200" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/20" />
             <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">
-               {new Date(hoveredEvent.date).toLocaleDateString()}
+               {new Date(hoveredEvent.startDate).toLocaleDateString()}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="pt-32 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
+      <div className="pt-20 px-6 max-w-[1400px] mx-auto z-20 relative mb-16">
         <motion.div style={{ scale: titleScale, opacity: titleOpacity }} className="origin-left">
-          <div className="text-[11vw] md:text-[7vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
+          <div className="text-[8vw] md:text-[5vw] leading-[0.85] font-black tracking-tighter text-white uppercase mb-8 flex flex-col items-start">
              <TextReveal delay={0.1}>The</TextReveal>
              <TextReveal delay={0.3} className="text-accentOrange">Collection</TextReveal>
           </div>
@@ -193,60 +195,77 @@ const Events = () => {
                             )
                         }
 
-                        // Hero Card with 3D Tilt
+                        // Hero Card with Premium Design
                         if (isHero) {
                             return (
                                 <motion.div
                                     key={event._id}
-                                    whileHover={{ scale: 1.02 }}
-                                    transition={{ duration: 0.3 }}
-                                    className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] md:aspect-[2/1] cursor-pointer`}
+                                    whileHover={{ y: -8 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[16/9] md:aspect-[2/1] cursor-pointer border border-borderSubtle hover:border-accentOrange/40 hover:shadow-2xl hover:shadow-accentOrange/10 transition-all duration-500`}
                                     onClick={() => setSelectedEvent(event)}
                                 >
-                                    <div className="w-full h-full">
-                                    <img src={event.image} alt={event.title} className="w-full h-full object-cover transition-transform duration-700" />
-                                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-                                    <div className="absolute inset-0 p-12 flex flex-col justify-end">
-                                        <div className="mb-auto">
-                                            <span className="px-4 py-2 bg-accentOrange text-white text-sm font-bold uppercase rounded-full tracking-wider">Featured Event</span>
+                                    <div className="w-full h-full flex flex-col md:flex-row">
+                                        {/* Image Section (60%) */}
+                                        <div className="md:w-3/5 h-2/3 md:h-full relative overflow-hidden">
+                                            <motion.img 
+                                                src={event.image} 
+                                                alt={event.title} 
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+                                            
+                                            <div className="absolute top-4 left-4">
+                                                <span className="px-4 py-1.5 bg-accentOrange text-white text-xs font-bold uppercase rounded-full tracking-wider shadow-lg">Featured Event</span>
+                                            </div>
                                         </div>
-                                         <h3 className="text-6xl font-black text-white uppercase leading-none mb-4 tracking-tight drop-shadow-xl">{event.title}</h3>
-                                         <p className="text-white/90 text-xl max-w-2xl font-medium">{event.description}</p>
-                                    </div>
+
+                                        {/* Content Section (40%) */}
+                                        <div className="md:w-2/5 p-6 flex flex-col justify-center bg-bgCard border-l border-white/5 relative overflow-hidden">
+                                            {/* Glow Effect */}
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-accentOrange/5 rounded-full blur-3xl pointer-events-none" />
+
+                                            <div className="mb-3 flex items-center gap-2">
+                                                 <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-accentOrange uppercase tracking-wide">
+                                                    {event.category}
+                                                 </span>
+                                                 <span className="text-textMuted text-xs font-medium">
+                                                    {new Date(event.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                 </span>
+                                            </div>
+
+                                            <h3 className="text-2xl md:text-3xl font-black text-white uppercase leading-none mb-3 group-hover:text-accentOrange transition-colors line-clamp-2">
+                                                {event.title}
+                                            </h3>
+                                            
+                                            <p className="text-textMuted text-sm line-clamp-2 mb-4 leading-relaxed">
+                                                {event.description}
+                                            </p>
+
+                                            <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-textMuted uppercase tracking-wider">Starting from</span>
+                                                    <span className="text-xl font-bold text-white">₹{event.price}</span>
+                                                </div>
+                                                
+                                                <motion.div 
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="w-10 h-10 rounded-full bg-accentOrange flex items-center justify-center text-white shadow-lg shadow-accentOrange/20"
+                                                >
+                                                    <ArrowUpRight className="w-5 h-5" />
+                                                </motion.div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             );
                         }
 
                         return (
-                            <motion.div 
-                                key={event._id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.4, delay: index * 0.05 }}
-                                className={`group relative bg-bgCard overflow-hidden rounded-3xl ${colSpanClass} aspect-[4/5] cursor-pointer`}
-                                onClick={() => setSelectedEvent(event)}
-                            >
-                                <img src={event.image} alt={event.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-                                
-                                <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                                    <div className="flex justify-between items-start">
-                                        <span className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-xs font-bold uppercase rounded-full border border-white/10">{event.category}</span>
-                                        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                                            <ArrowUpRight className="w-5 h-5" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-accentOrange font-medium mb-1 tracking-wider uppercase text-sm">
-                                            {new Date(event.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-white uppercase leading-none mb-3">{event.title}</h3>
-                                        <p className="text-white/60 text-sm line-clamp-1">{event.location}</p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                            <div key={event._id} className={`${colSpanClass} h-full`}>
+                                <EventCard event={event} />
+                            </div>
                         );
                     })}
                  </div>

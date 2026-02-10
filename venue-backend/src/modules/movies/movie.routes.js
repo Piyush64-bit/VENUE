@@ -1,5 +1,5 @@
 const express = require('express');
-const { createMovie, getMovies } = require('./movie.controller');
+const { createMovie, getMovies, getMovieById, getMovieSlots } = require('./movie.controller');
 const verifyToken = require('../../middlewares/verifyToken');
 const checkRole = require('../../middlewares/checkRole');
 
@@ -68,5 +68,47 @@ router.get('/', getMovies);
  *         description: Forbidden
  */
 router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createMovie);
+
+// Get single movie
+/**
+ * @swagger
+ * /movies/{id}:
+ *   get:
+ *     summary: Get a single published movie by ID
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Movie details
+ *       404:
+ *         description: Movie not found or not published
+ */
+router.get('/:id', getMovieById);
+
+// Get movie slots
+/**
+ * @swagger
+ * /movies/{id}/slots:
+ *   get:
+ *     summary: Get active slots for a specific movie
+ *     tags: [Movies]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of active slots with available seats
+ *       404:
+ *         description: Movie not found or not published
+ */
+router.get('/:id/slots', getMovieSlots);
 
 module.exports = router;
