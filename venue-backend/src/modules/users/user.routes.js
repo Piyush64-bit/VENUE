@@ -1,8 +1,14 @@
 const express = require('express');
 const userController = require('./user.controller');
 const verifyToken = require('../../middlewares/verifyToken');
+const { upload } = require('../../middlewares/upload.middleware');
 
 const router = express.Router();
+
+// Test route to verify router is working
+router.get('/test', (req, res) => {
+    res.json({ message: 'User routes are working!' });
+});
 
 // protect all routes after this middleware
 router.use(verifyToken);
@@ -13,6 +19,12 @@ router.use(verifyToken);
  *   name: Users
  *   description: User management
  */
+
+// User Profile Routes
+router.get('/profile', userController.getProfile);
+router.patch('/profile', userController.updateProfile);
+router.patch('/password', userController.changePassword);
+router.post('/profile/picture', upload.single('profilePicture'), userController.uploadProfilePicture);
 
 /**
  * @swagger

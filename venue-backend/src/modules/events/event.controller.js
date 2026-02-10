@@ -11,7 +11,9 @@ const createEvent = catchAsync(async (req, res, next) => {
 });
 
 const getEvents = catchAsync(async (req, res, next) => {
-  const { events, count } = await eventService.getEvents(req.query);
+  // Force isPublished=true for public listing
+  const query = { ...req.query, isPublished: true };
+  const { events, count } = await eventService.getEvents(query);
 
   return res.status(200).json(
     new ApiResponse(200, { results: count, events }, "Events fetched successfully")
@@ -20,13 +22,29 @@ const getEvents = catchAsync(async (req, res, next) => {
 
 const getEventById = catchAsync(async (req, res, next) => {
   const event = await eventService.getEventById(req.params.id);
+
+  // Public access: must be published
+  if (!event.isPublished) {
+    const AppError = require('../../utils/AppError');
+    throw new AppError('Event not found or not published', 404);
+  }
+
   return res.status(200).json(
     new ApiResponse(200, { event }, "Event fetched successfully")
   );
 });
 
 const getEventSlots = catchAsync(async (req, res, next) => {
-  const slots = await eventService.getEventSlots(req.params.id);
+  // 1. Check if event exists and is published
+  const event = await eventService.getEventById(req.params.id);
+
+  if (!event || !event.isPublished) {
+    const AppError = require('../../utils/AppError');
+    throw new AppError('Event not found or not published', 404);
+  }
+
+  // 2. Fetch slots with filters (Active & Capacity)
+  const slots = await eventService.getEventSlots(req.params.id, true); // true = activeOnly
   return res.status(200).json(
     new ApiResponse(200, { slots }, "Slots fetched successfully")
   );

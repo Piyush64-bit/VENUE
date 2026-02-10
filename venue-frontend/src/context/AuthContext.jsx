@@ -16,19 +16,19 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('venue_user');
     const token = localStorage.getItem('token');
     
-    console.log('AuthContext: Restoring state...', { storedUser, token });
+
 
     if (storedUser && storedUser !== "undefined" && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log('AuthContext: User parsed successfully', parsedUser);
+
         setUser(parsedUser);
       } catch (error) {
         console.error("Failed to parse user from local storage", error);
         localStorage.removeItem('venue_user');
       }
     } else {
-        console.log('AuthContext: No valid session found');
+
     }
     setIsLoading(false);
   }, []);
@@ -47,9 +47,16 @@ export const AuthProvider = ({ children }) => {
          showToast(`Good news! You've been promoted off the waitlist!`, 'success');
       });
 
+      // Handle connection errors silently
+      socket.on('connect_error', (error) => {
+        console.warn('Socket connection failed:', error.message);
+        // Don't show toast to user, just log it
+      });
+
       return () => {
         socket.off('waitlist:added');
         socket.off('waitlist:promoted');
+        socket.off('connect_error');
         socket.disconnect();
       };
     }
@@ -57,7 +64,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const { user, token } = response.data.data;
+    const data = response.data?.data || response.data || {};
+    const { user, token } = data;
     
     localStorage.setItem('token', token);
     localStorage.setItem('venue_user', JSON.stringify(user));
@@ -65,9 +73,10 @@ export const AuthProvider = ({ children }) => {
     return user;
   };
 
-  const register = async (name, email, password) => {
-    const response = await api.post('/auth/register', { name, email, password });
-    const { user, token } = response.data.data;
+  const register = async (name, email, password, role = 'USER') => {
+    const response = await api.post('/auth/register', { name, email, password, role });
+    const data = response.data?.data || response.data || {};
+    const { user, token } = data;
     
     localStorage.setItem('token', token);
     localStorage.setItem('venue_user', JSON.stringify(user));
@@ -85,13 +94,14 @@ export const AuthProvider = ({ children }) => {
     if (!user) return; // Should handle auth check in UI
     try {
         const response = await api.post('/users/favorites', { itemId, itemType });
-        const updatedFavorites = response.data.data.favorites;
+        const data = response.data?.data || response.data || {};
+        const updatedFavorites = data.favorites || [];
         
         const updatedUser = { ...user, favorites: updatedFavorites };
         setUser(updatedUser);
         localStorage.setItem('venue_user', JSON.stringify(updatedUser)); // Persist
         
-        const action = response.data.data.action;
+        const action = data.action;
         showToast(action === 'added' ? 'Added to favorites' : 'Removed from favorites', 'success');
         return true;
     } catch (error) {
@@ -101,8 +111,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedUserData) => {
+    const updatedUser = { ...user, ...updatedUserData };
+    setUser(updatedUser);
+    localStorage.setItem('venue_user', JSON.stringify(updatedUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, toggleFavorite }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, toggleFavorite, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,22 +2,17 @@ import axios from "axios";
 
 // Helper to determine the dynamic base URL
 const getBaseUrl = () => {
-  // Check for environment variables
-  const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
-
-  // If env var is set, use it (ensuring it ends with /api/v1)
-  if (envUrl) {
-    // Remove trailing slash and optional /api suffix to normalize
-    const cleanUrl = envUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
-    return `${cleanUrl}/api/v1`;
+  // 1. Production (Environment Variable)
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
   }
 
-  // Fallback for development (localhost)
+  // 2. Development (Localhost)
   if (import.meta.env.DEV) {
     return "http://localhost:5000/api/v1";
   }
 
-  // Fallback for production (existing Render URL as safety net)
+  // 3. Fallback (Live Render URL - Safety net)
   return "https://venue-z8ti.onrender.com/api/v1";
 };
 
@@ -45,13 +40,11 @@ api.interceptors.response.use(
   }
 );
 
-// Request interceptor to attach token
+// Request interceptor - Token is automatically sent via httpOnly cookies
+// No need to manually attach from localStorage (security improvement)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Token is sent automatically via cookies with withCredentials: true
     return config;
   },
   (error) => {

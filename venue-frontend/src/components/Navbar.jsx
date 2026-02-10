@@ -95,9 +95,17 @@ const Navbar = () => {
                       <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-accentOrange to-purple-500 animate-spin-slow opacity-70 group-hover:opacity-100 blur-[2px] transition-opacity" />
                       <div className="absolute inset-[1.5px] rounded-full bg-bgPrimary z-10 flex items-center justify-center overflow-hidden border border-white/10">
                          {/* Avatar Content */}
-                         <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-                            <span className="text-xs font-black text-white/90 font-mono">{user.name.charAt(0)}</span>
-                         </div>
+                         {user.profilePicture ? (
+                            <img 
+                              src={user.profilePicture} 
+                              alt={user.name}
+                              className="w-full h-full object-cover"
+                            />
+                         ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                               <span className="text-xs font-black text-white/90 font-mono">{user.name.charAt(0)}</span>
+                            </div>
+                         )}
                       </div>
                   </div>
                   

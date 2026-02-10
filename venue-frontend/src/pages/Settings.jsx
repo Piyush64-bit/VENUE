@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Lock, Mail, Smartphone, Shield, LogOut, ChevronRight, Speaker } from 'lucide-react';
+import { User, Bell, Lock, Mail, Smartphone, Shield, LogOut, ChevronRight, Speaker, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import SEO from '../components/ui/SEO';
+import { getProfile, updateProfile, changePassword, uploadProfilePicture } from '../api/user';
+import { toast } from 'react-hot-toast';
 
 const BentoSection = ({ className, children, delay = 0 }) => (
     <motion.div 
@@ -42,19 +44,93 @@ const ToggleItem = ({ label, description, defaultChecked = false, icon: Icon }) 
     );
 };
 
-const InputField = ({ label, defaultValue, type="text" }) => (
-    <div className="group">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block group-focus-within:text-accentOrange transition-colors">{label}</label>
-        <input 
-            type={type} 
-            defaultValue={defaultValue}
-            className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors placeholder:text-white/20"
-        />
-    </div>
-);
-
 const Settings = () => {
-    const { user, logout } = useAuth();
+    const { user: authUser, logout, updateUser } = useAuth();
+    const [profileData, setProfileData] = useState({ name: '', email: '' });
+    const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+    const [isLoadingPassword, setIsLoadingPassword] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const [profilePicture, setProfilePicture] = useState(null);
+    const fileInputRef = useRef(null);
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    const loadProfile = async () => {
+        try {
+            const response = await getProfile();
+            const userData = response.data.user;
+            setProfileData({ name: userData.name, email: userData.email });
+            setProfilePicture(userData.profilePicture);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to load profile');
+        }
+    };
+
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        setIsLoadingProfile(true);
+        try {
+            const response = await updateProfile(profileData);
+            updateUser(response.data.user);
+            toast.success('Profile updated successfully!');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setIsLoadingProfile(false);
+        }
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            toast.error('New passwords do not match');
+            return;
+        }
+
+        setIsLoadingPassword(true);
+        try {
+            await changePassword(passwordData);
+            toast.success('Password changed successfully!');
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to change password');
+        } finally {
+            setIsLoadingPassword(false);
+        }
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size must be less than 5MB');
+            return;
+        }
+
+        setIsUploadingImage(true);
+        try {
+            const response = await uploadProfilePicture(file);
+            setProfilePicture(response.data.user.profilePicture);
+            updateUser(response.data.user);
+            toast.success('Profile picture updated successfully!');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to upload image');
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-bgPrimary pt-32 pb-24 px-6">
@@ -78,32 +154,74 @@ const Settings = () => {
                     
                     {/* 1. Account Profile Card - Large Vertical */}
                     <BentoSection className="md:col-span-1 md:row-span-2 flex flex-col items-center text-center pt-12">
-                         <div className="relative w-32 h-32 mb-6 group cursor-pointer">
+                         <div className="relative w-32 h-32 mb-6 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                              <div className="absolute inset-0 bg-gradient-to-tr from-accentOrange to-purple-600 rounded-full animate-spin-slow opacity-70 blur-md" />
                              <div className="relative w-full h-full rounded-full bg-black border-2 border-white/10 overflow-hidden">
-                                 <div className="w-full h-full flex items-center justify-center bg-white/5 text-4xl font-black text-white/50">
-                                     {user?.name?.charAt(0)}
-                                 </div>
+                                 {profilePicture ? (
+                                     <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                                 ) : (
+                                     <div className="w-full h-full flex items-center justify-center bg-white/5 text-4xl font-black text-white/50">
+                                         {authUser?.name?.charAt(0)}
+                                     </div>
+                                 )}
+                                 {isUploadingImage && (
+                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                         <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                     </div>
+                                 )}
                              </div>
                              <div className="absolute bottom-0 right-0 p-2 bg-accentOrange rounded-full text-white shadow-lg scale-90 group-hover:scale-100 transition-transform">
-                                 <User className="w-4 h-4" />
+                                 <Camera className="w-4 h-4" />
                              </div>
                          </div>
                          
-                         <h3 className="text-2xl font-bold text-white mb-1">{user?.name}</h3>
-                         <p className="text-accentOrange text-xs font-bold uppercase tracking-widest mb-8">Pro Member</p>
+                         <input
+                             ref={fileInputRef}
+                             type="file"
+                             accept="image/*"
+                             onChange={handleImageUpload}
+                             className="hidden"
+                         />
+                         
+                         <h3 className="text-2xl font-bold text-white mb-1">{authUser?.name}</h3>
+                         <p className="text-accentOrange text-xs font-bold uppercase tracking-widest mb-8">{authUser?.role || 'User'}</p>
 
-                         <div className="w-full space-y-6 text-left">
-                             <InputField label="Full Name" defaultValue={user?.name} />
-                             <InputField label="Email Address" defaultValue={user?.email} />
-                             <InputField label="Username" defaultValue="@alexcarter" />
-                         </div>
+                         <form onSubmit={handleProfileUpdate} className="w-full space-y-6 text-left">
+                             <div className="group">
+                                 <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block group-focus-within:text-accentOrange transition-colors">Full Name</label>
+                                 <input 
+                                     type="text" 
+                                     value={profileData.name}
+                                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                     className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors placeholder:text-white/20"
+                                     required
+                                 />
+                             </div>
+                             <div className="group">
+                                 <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block group-focus-within:text-accentOrange transition-colors">Email Address</label>
+                                 <input 
+                                     type="email" 
+                                     value={profileData.email}
+                                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                     className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors placeholder:text-white/20"
+                                     required
+                                 />
+                             </div>
 
-                         <div className="mt-auto pt-12 w-full">
-                             <Button variant="outline" className="w-full border-white/10 hover:border-white/30 text-white/60 hover:text-white">
-                                 Upload New Avatar
-                             </Button>
-                         </div>
+                             <div className="mt-auto pt-6 w-full">
+                                 <Button 
+                                     type="submit" 
+                                     disabled={isLoadingProfile}
+                                     className="w-full bg-accentOrange hover:bg-accentHover text-white"
+                                 >
+                                     {isLoadingProfile ? (
+                                         <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Updating...</>
+                                     ) : (
+                                         'Update Profile'
+                                     )}
+                                 </Button>
+                             </div>
+                         </form>
                     </BentoSection>
 
                     {/* 2. Notifications - Wide */}
@@ -124,24 +242,53 @@ const Settings = () => {
                     <BentoSection className="md:col-span-1">
                          <div className="flex items-center gap-3 mb-6">
                             <Lock className="w-6 h-6 text-accentOrange" />
-                            <h3 className="text-xl font-bold text-white">Security</h3>
+                            <h3 className="text-xl font-bold text-white">Change Password</h3>
                         </div>
-                        <div className="space-y-4">
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition-colors flex justify-between items-center group">
-                                <div>
-                                    <p className="font-bold text-white text-sm">Change Password</p>
-                                    <p className="text-textMuted text-xs">Last update: 3mo ago</p>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+                        <form onSubmit={handlePasswordChange} className="space-y-4">
+                            <div className="group">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block">Current Password</label>
+                                <input 
+                                    type="password" 
+                                    value={passwordData.currentPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                    className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors"
+                                    required
+                                />
                             </div>
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition-colors flex justify-between items-center group">
-                                <div>
-                                    <p className="font-bold text-white text-sm">2FA Auth</p>
-                                    <p className="text-green-400 text-xs">Enabled</p>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+                            <div className="group">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block">New Password</label>
+                                <input 
+                                    type="password" 
+                                    value={passwordData.newPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                    className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors"
+                                    required
+                                    minLength={6}
+                                />
                             </div>
-                        </div>
+                            <div className="group">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1 block">Confirm Password</label>
+                                <input 
+                                    type="password" 
+                                    value={passwordData.confirmPassword}
+                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                    className="w-full bg-transparent border-b border-white/10 py-2 text-white font-medium focus:outline-none focus:border-accentOrange transition-colors"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                            <Button 
+                                type="submit" 
+                                disabled={isLoadingPassword}
+                                className="w-full bg-accentOrange hover:bg-accentHover text-white mt-4"
+                            >
+                                {isLoadingPassword ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Changing...</>
+                                ) : (
+                                    'Change Password'
+                                )}
+                            </Button>
+                        </form>
                     </BentoSection>
 
                     {/* 4. Danger Zone - Square */}

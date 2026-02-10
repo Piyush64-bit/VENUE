@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { showToast } from '../components/NotificationToast';
 import { ChevronLeft } from 'lucide-react';
 
-const Seats = () => {
+const Seats = ({ type = 'event' }) => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,13 +15,26 @@ const Seats = () => {
   const [loading, setLoading] = useState(true);
   const slot = location.state?.slot;
 
+  const isMovie = type === 'movie';
+  const slotsRoute = isMovie ? `/movie/${id}/slots` : `/event/${id}/slots`;
+  const checkoutRoute = isMovie ? `/movie/${id}/checkout` : `/event/${id}/checkout`;
+
   useEffect(() => {
     if (!slot) {
-      navigate(`/event/${id}/slots`);
+      navigate(slotsRoute);
       return;
     }
 
     const fetchSeats = async () => {
+      // Immediate check for mock slots
+      if (slot.isMock) {
+          console.warn("Generating Mock Seats for Demo Slot");
+          showToast("Demo Mode: Showing example seat layout", "info");
+          generateMockSeats();
+          setLoading(false);
+          return;
+      }
+
       try {
         const response = await api.get(`/slots/${slot._id}/seats`);
         if (response.data && response.data.length > 0) {
@@ -30,8 +43,18 @@ const Seats = () => {
             throw new Error("No seats found");
         }
       } catch (error) {
-        console.log("Using Mock Data for Seats");
-        // Generate flexible mock seats layout
+        console.error("Failed to load seats", error);
+        showToast("Failed to load seats. Please try again.", "error");
+        setSeats([]); 
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSeats();
+  }, [slot, id, navigate, slotsRoute]);
+
+  const generateMockSeats = () => {
         const mockSeats = [];
         const rows = 6;
         const cols = 8;
@@ -50,13 +73,7 @@ const Seats = () => {
             }
         }
         setSeats(mockSeats);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSeats();
-  }, [slot, id, navigate]);
+  };
 
   const toggleSeat = (seat) => {
     if (seat.status === 'booked' || seat.status === 'disabled') return;
@@ -76,7 +93,7 @@ const Seats = () => {
   };
 
   const handleCheckout = () => {
-    navigate(`/event/${id}/checkout`, { 
+    navigate(checkoutRoute, { 
       state: { 
         slot, 
         selectedSeats 
@@ -92,7 +109,7 @@ const Seats = () => {
        <div className="fixed top-0 left-0 right-0 p-6 z-40 bg-gradient-to-b from-bgPrimary to-transparent pointer-events-none">
           <div className="max-w-6xl mx-auto flex items-center justify-between pointer-events-auto">
              <button 
-                onClick={() => navigate(`/event/${id}/slots`)}
+                onClick={() => navigate(slotsRoute)}
                 className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group px-4 py-2 rounded-full bg-black/20 backdrop-blur-md border border-white/5 hover:border-white/20"
              >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

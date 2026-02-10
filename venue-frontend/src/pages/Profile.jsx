@@ -62,26 +62,36 @@ const Profile = () => {
                            <span className="text-white/40 text-xs font-mono">SINCE {user.memberSince}</span>
                        </div>
                    </div>
-                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accentOrange to-purple-600 p-0.5">
-                       <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl font-black text-white/20">
-                           {user.name.charAt(0)}
-                       </div>
-                   </div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accentOrange to-purple-600 p-0.5">
+                        <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                            {user.profilePicture ? (
+                                <img 
+                                    src={user.profilePicture} 
+                                    alt={user.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-3xl font-black text-white/20">
+                                    {user.name.charAt(0)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                </BentoBlock>
 
-               {/* 2. Stats Block (Top Right - 1x1) */}
-               <BentoBlock className="md:col-span-1 md:row-span-1 flex flex-col justify-between p-6 bg-black/20" layoutId="stats">
-                   <div className="flex justify-between items-start">
-                       <div className="p-2 bg-white/5 rounded-xl">
-                           <RotateCw className="w-5 h-5 text-white/50" />
-                       </div>
-                       <ArrowUpRight className="w-5 h-5 text-white/20" />
-                   </div>
-                   <div>
-                       <span className="text-4xl font-bold text-white block mb-1">850</span>
-                       <span className="text-xs text-white/40 uppercase tracking-widest font-bold">XP Earned</span>
-                   </div>
-               </BentoBlock>
+                {/* 2. Stats Block (Top Right - 1x1) */}
+                <BentoBlock className="md:col-span-1 md:row-span-1 flex flex-col justify-between p-6 bg-black/20" layoutId="stats">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 bg-white/5 rounded-xl">
+                            <Ticket className="w-5 h-5 text-accentOrange" />
+                        </div>
+                        <ArrowUpRight className="w-5 h-5 text-white/20" />
+                    </div>
+                    <div>
+                        <span className="text-4xl font-bold text-white block mb-1">{TICKETS.length}</span>
+                        <span className="text-xs text-white/40 uppercase tracking-widest font-bold">Total Bookings</span>
+                    </div>
+                </BentoBlock>
 
                 {/* 3. Settings/Action Block (Top Right - 1x1) */}
                <Link to="/settings" className="contents">

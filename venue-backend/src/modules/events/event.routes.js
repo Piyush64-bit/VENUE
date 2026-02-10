@@ -88,12 +88,16 @@ router.get('/organizer', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), getOrga
  */
 router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createEvent);
 
+const validateId = require('../../middlewares/validateId');
+
+// ... (existing code)
+
 // Get single event
 /**
  * @swagger
  * /events/{id}:
  *   get:
- *     summary: Get a single event by ID
+ *     summary: Get a single published event by ID
  *     tags: [Events]
  *     parameters:
  *       - in: path
@@ -106,17 +110,16 @@ router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createEvent);
  *       200:
  *         description: Event details
  *       404:
- *         description: Event not found
+ *         description: Event not found or not published
  */
-router.get('/:id', getEventById);
+router.get('/:id', validateId('id'), getEventById);
 
-// Get slots for an event
 // Get slots for an event
 /**
  * @swagger
  * /events/{id}/slots:
  *   get:
- *     summary: Get slots for a specific event
+ *     summary: Get active slots for a specific event
  *     tags: [Events]
  *     parameters:
  *       - in: path
@@ -127,11 +130,11 @@ router.get('/:id', getEventById);
  *         description: Event ID
  *     responses:
  *       200:
- *         description: List of slots
+ *         description: List of active slots with available seats
  *       404:
- *         description: Event not found
+ *         description: Event not found or not published
  */
-router.get('/:id/slots', getEventSlots);
+router.get('/:id/slots', validateId('id'), getEventSlots);
 
 module.exports = router;
 

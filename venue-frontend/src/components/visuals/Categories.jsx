@@ -1,27 +1,33 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import Border2 from '../../assets/border-2 move.jpg';
 import KaranAujla from '../../assets/p-pop(karan aujla concert).jpg';
 import JLF from '../../assets/JLF.webp';
 
 const Categories = () => {
+  const navigate = useNavigate();
+
   const categories = [
     {
       id: 'cinema',
       title: 'Cinema',
       image: Border2,
-      desc: 'Premiere screenings & festivals'
+      desc: 'Premiere screenings & festivals',
+      link: '/movies'
     },
     {
       id: 'live',
       title: 'Live',
       image: KaranAujla,
-      desc: 'Concerts & performances'
+      desc: 'Concerts & performances',
+      link: '/events'
     },
     {
       id: 'culture',
       title: 'Culture',
       image: JLF,
-      desc: 'Art, literature & heritage'
+      desc: 'Art, literature & heritage',
+      link: '/events'
     }
   ];
 
@@ -46,6 +52,7 @@ const Categories = () => {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               className="group cursor-pointer"
+              onClick={() => navigate(cat.link)}
             >
               <div className="aspect-video md:aspect-[3/4] overflow-hidden rounded-2xl mb-6 relative">
                  <img 

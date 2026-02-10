@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { motion } from 'framer-motion';
+import RoleToggle from '../components/ui/RoleToggle';
 
 const Register = () => {
   const { register: registerUser } = useAuth();
@@ -38,13 +39,18 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center pt-12">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
+        {/* Role Toggle */}
+        <div className="flex justify-center mb-6">
+          <RoleToggle />
+        </div>
+
         <Card className="shadow-2xl border-borderSubtle/50 bg-bgCard/50 backdrop-blur-xl">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Create an account</h1>

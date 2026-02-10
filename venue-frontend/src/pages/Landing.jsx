@@ -10,6 +10,7 @@ import Marquee from '../components/visuals/Marquee';
 import NoiseOverlay from '../components/visuals/NoiseOverlay';
 import MagneticButton from '../components/visuals/MagneticButton';
 import Categories from '../components/visuals/Categories';
+import EventCard from '../components/EventCard';
 
 import api from '../api/axios';
 
@@ -37,20 +38,29 @@ const Landing = () => {
              title: event.title,
              subtitle: event.description,
              date: new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+             rawDate: event.startDate,
              image: event.image,
-             category: event.category
+             category: event.category,
+             type: 'event',
+             location: event.location,
+             price: event.price
            }));
            combined = [...combined, ...mappedEvents];
         }
 
-        if (Array.isArray(moviesRes.data)) {
-           const mappedMovies = moviesRes.data.map(movie => ({
+        if (Array.isArray(moviesRes.data?.data?.movies || moviesRes.data)) {
+           const moviesData = moviesRes.data?.data?.movies || moviesRes.data;
+           const mappedMovies = moviesData.map(movie => ({
              id: movie._id,
              title: movie.title,
              subtitle: movie.description,
              date: new Date(movie.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+             rawDate: movie.releaseDate,
              image: movie.poster,
-             category: movie.genre
+             category: movie.genre || 'Movie',
+             type: 'movie',
+             runtime: movie.runtime,
+             rating: movie.rating
            }));
            combined = [...combined, ...mappedMovies];
         }
@@ -83,6 +93,7 @@ const Landing = () => {
         
         {/* Mobile Aurora Glow (Animated) */}
         <motion.div 
+          style={{ willChange: "transform, opacity" }}
           animate={{ 
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3], 
@@ -95,6 +106,7 @@ const Landing = () => {
           className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-accentOrange/20 blur-[100px] rounded-full pointer-events-none md:hidden" 
         />
         <motion.div 
+          style={{ willChange: "transform, opacity" }}
           animate={{ 
             scale: [1, 1.1, 1],
             opacity: [0.2, 0.4, 0.2], 
@@ -136,6 +148,7 @@ const Landing = () => {
              </motion.div>
 
             <motion.div
+              style={{ willChange: "transform" }}
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
@@ -162,7 +175,7 @@ const Landing = () => {
              {/* Primary Action - Full Width & Bold on Mobile */}
              <button 
                onClick={() => navigate('/events')}
-               className="group relative bg-accentOrange text-white h-14 md:h-auto md:px-8 md:py-4 rounded-2xl md:rounded-full font-bold text-lg hover:bg-accentHover transition-all shadow-[0_4px_20px_rgba(242,140,40,0.3)] hover:shadow-[0_4px_25px_rgba(242,140,40,0.5)] active:scale-95 flex items-center justify-center gap-2"
+               className="group relative bg-accentOrange text-white h-14 md:h-auto md:px-8 md:py-4 rounded-2xl md:rounded-full font-bold text-lg hover:bg-accentHover transition-all shadow-[0_4px_20px_rgba(242,140,40,0.3)] hover:shadow-[0_4px_25px_rgba(242,140,40,0.5)] active:scale-95 flex items-center justify-center gap-2 py-4"
              >
                <span>Explore Events</span>
              </button>
@@ -170,7 +183,7 @@ const Landing = () => {
              {/* Secondary Action */}
              <button 
                onClick={() => navigate('/movies')}
-               className="group bg-white/5 border border-white/10 text-white h-14 md:h-auto md:px-8 md:py-4 rounded-2xl md:rounded-full font-bold text-lg hover:bg-white/10 transition-all active:scale-95 backdrop-blur-sm"
+               className="group bg-white/5 border border-white/10 text-white h-14 md:h-auto md:px-8 md:py-4 rounded-2xl md:rounded-full font-bold text-lg hover:bg-white/10 transition-all active:scale-95 backdrop-blur-sm py-4"
              >
                Movies
              </button>
@@ -218,7 +231,7 @@ const Landing = () => {
         {/* Horizontal Scroll Area */}
         <div className="pb-20">
            <Marquee baseVelocity={0.1} pauseOnHover>
-             {events.map((event) => (
+             {events.slice(0, 10).map((event) => (
                 <motion.div 
                   key={event.id}
                   className="w-[280px] md:w-[320px] group cursor-pointer relative mx-4"
@@ -230,6 +243,8 @@ const Landing = () => {
                         src={event.image} 
                         alt={event.title} 
                         loading="lazy"
+                        width="320"
+                        height="400"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" // Zoom effect
                       />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
