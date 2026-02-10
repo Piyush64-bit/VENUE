@@ -78,9 +78,8 @@ exports.uploadImage = catchAsync(async (req, res, next) => {
         return next(new AppError('No image file uploaded', 400));
     }
 
-    // Return the file URL
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    // Return the file URL (Cloudinary URL)
+    const imageUrl = req.file.path;
 
     res.status(200).json(
         new ApiResponse(200, { url: imageUrl }, 'Image uploaded successfully')
@@ -174,10 +173,8 @@ exports.uploadImage = catchAsync(async (req, res, next) => {
         return next(new AppError('No file uploaded', 400));
     }
 
-    // Construct URL (Assuming localhost or simple deployment)
-    // In production, this might be Cloudinary or S3 URL.
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    // Cloudinary URL
+    const fileUrl = req.file.path;
 
     res.status(200).json({
         status: 'success',

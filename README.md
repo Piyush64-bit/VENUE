@@ -100,6 +100,9 @@ Ensure the following variables are set in your production environment (e.g., Ren
 - `BASE_URL`: Your backend URL (e.g., `https://venue-z8ti.onrender.com`)
 - `FRONTEND_URL`: Your frontend URL (e.g., `https://venueapp.vercel.app`)
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed origins (e.g., `https://venueapp.vercel.app`)
+- `CLOUDINARY_CLOUD_NAME`: Your Cloudinary Cloud Name
+- `CLOUDINARY_API_KEY`: Your Cloudinary API Key
+- `CLOUDINARY_API_SECRET`: Your Cloudinary API Secret
 
 
 

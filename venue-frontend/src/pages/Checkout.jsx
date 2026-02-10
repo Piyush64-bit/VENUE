@@ -69,7 +69,7 @@ const Checkout = ({ type = 'event' }) => {
       await api.post('/bookings', bookingData);
       
       showToast("Payment Successful!", "success");
-      const confirmationRoute = isMovie ? `/movie/${id}/confirmation` : `/event/${id}/confirmation`;
+      const confirmationRoute = isMovie ? `/movies/${id}/confirmation` : `/event/${id}/confirmation`;
       navigate(confirmationRoute, { state: { bookingData, totalAmount } });
 
     } catch (error) {

@@ -3,8 +3,10 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
-import { Search, ArrowUpRight, Ticket, User, Sparkles, X } from 'lucide-react';
+import { Search, ArrowUpRight, Ticket, User, Sparkles, X, ArrowRight } from 'lucide-react';
 import api from '../api/axios';
+import { movieApi } from '../api/movies';
+import MovieCard from '../components/MovieCard';
 import EventCard from '../components/EventCard';
 import { Skeleton } from '../components/ui/Skeleton';
 import SEO from '../components/ui/SEO';
@@ -16,7 +18,7 @@ const CATEGORIES = [
   { id: 'music', name: 'Live Music', image: 'https://images.unsplash.com/photo-1501612780327-45045538702b?auto=format&fit=crop&q=80&w=600', col: 'col-span-2' },
   { id: 'workshops', name: 'Workshops', image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=600', col: 'col-span-1' },
   { id: 'comedy', name: 'Comedy', image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?auto=format&fit=crop&q=80&w=600', col: 'col-span-1' },
-  { id: 'theatre', name: 'Theatre', image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a11d0?auto=format&fit=crop&q=80&w=600', col: 'col-span-2' },
+  { id: 'theatre', name: 'Theatre', image: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&q=80&w=600', col: 'col-span-2' },
 ];
 
 const CURATED_COLLECTIONS = [
@@ -109,6 +111,19 @@ const Home = () => {
     },
     staleTime: 1000 * 60 * 5, 
   });
+
+  const { data: movies = [], isLoading: isLoadingMovies } = useQuery({
+    queryKey: ['movies'], // Fetch movies
+    queryFn: movieApi.getAll,
+    select: (data) => data.data?.movies || [],
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // Select a random movie for the "Theatre Poster" spotlight
+  const theatreSpotlight = useMemo(() => {
+    if (movies.length === 0) return null;
+    return movies[Math.floor(Math.random() * movies.length)];
+  }, [movies]);
 
 
 
@@ -268,6 +283,91 @@ const Home = () => {
               ))}
            </div>
         </div>
+      </section>
+
+      {/* THEATRE POSTER SECTION */}
+      {theatreSpotlight && (
+        <section className="px-6 mb-24 transition-all duration-300">
+           <div className="max-w-[1400px] mx-auto">
+              <div className="relative rounded-[2rem] overflow-hidden min-h-[400px] md:h-[450px] border border-white/10 group">
+                 {/* Background Image with Parallax-like effect */}
+                 <div className="absolute inset-0">
+                    <img 
+                      src={theatreSpotlight.poster} 
+                      alt={theatreSpotlight.title} 
+                      className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-[2s]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                 </div>
+
+                 <div className="absolute inset-0 p-6 md:p-12 flex flex-col justify-center items-start max-w-2xl">
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      className="space-y-6"
+                    >
+                       <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-accentOrange text-white text-xs font-bold uppercase tracking-wider rounded-full">
+                            Now Showing
+                          </span>
+                          <span className="text-white/60 text-sm font-medium tracking-wide uppercase">
+                            Theatre Spotlight
+                          </span>
+                       </div>
+
+                       <h2 className="text-5xl md:text-7xl font-black text-white uppercase leading-[0.9] tracking-tight">
+                          {theatreSpotlight.title}
+                       </h2>
+
+                       <p className="text-lg text-white/80 line-clamp-3 max-w-xl leading-relaxed">
+                          {theatreSpotlight.description}
+                       </p>
+
+                       <Link to={`/movies/${theatreSpotlight._id}`}>
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-white text-black px-8 py-4 rounded-full font-bold text-lg hover:bg-accentOrange hover:text-white transition-colors shadow-2xl flex items-center gap-2"
+                          >
+                             <Ticket className="w-5 h-5" />
+                             Book Tickets
+                          </motion.button>
+                       </Link>
+                    </motion.div>
+                 </div>
+              </div>
+           </div>
+        </section>
+      )}
+
+      {/* MOVIES SECTION */}
+      <section className="px-6 mb-32">
+         <div className="max-w-[1400px] mx-auto">
+            <div className="flex items-center justify-between mb-8">
+               <h2 className="text-3xl font-bold text-white">Latest Movies</h2>
+               <Link to="/movies" className="text-accentOrange hover:text-white transition-colors text-sm font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer">
+                 View All <ArrowRight className="w-4 h-4" />
+               </Link>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {isLoadingMovies ? (
+                    [...Array(5)].map((_, i) => (<Skeleton key={i} className="h-[400px] rounded-2xl" />))
+                ) : movies.length > 0 ? (
+                  movies.slice(0, 10).map((movie) => (
+                    <div key={movie._id} className="h-full">
+                       <MovieCard movie={movie} />
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center text-textMuted">
+                     <p>No movies showing currently.</p>
+                  </div>
+                )}
+            </div>
+         </div>
       </section>
 
       {/* Featured Events (Randomized) */}

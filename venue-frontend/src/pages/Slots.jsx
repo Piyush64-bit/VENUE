@@ -66,7 +66,7 @@ const Slots = ({ type = 'event' }) => {
 
   const handleContinue = () => {
     if (selectedSlot) {
-        navigate(isMovie ? `/movie/${id}/seats` : `/event/${id}/seats`, { state: { slot: selectedSlot } });
+        navigate(isMovie ? `/movies/${id}/seats` : `/event/${id}/seats`, { state: { slot: selectedSlot } });
     }
   };
 
@@ -89,7 +89,7 @@ const Slots = ({ type = 'event' }) => {
            className="mb-12"
         >
            <button 
-             onClick={() => navigate(isMovie ? `/movie/${id}` : `/event/${id}`)}
+             onClick={() => navigate(isMovie ? `/movies/${id}` : `/event/${id}`)}
              className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-6 group"
            >
               <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-white/10">

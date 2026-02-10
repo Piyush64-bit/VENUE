@@ -176,10 +176,8 @@ exports.uploadProfilePicture = catchAsync(async (req, res, next) => {
         return next(new AppError('Please upload an image', 400));
     }
 
-    // Construct the full URL for the uploaded file
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const profilePictureUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    // Cloudinary URL
+    const profilePictureUrl = req.file.path;
 
     const user = await User.findByIdAndUpdate(
         req.user.userId,
