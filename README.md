@@ -91,6 +91,18 @@ npm start
 
 ---
 
+## Deployment Checklist
+
+### Environment Variables
+Ensure the following variables are set in your production environment (e.g., Render, Vercel):
+
+- `NODE_ENV`: `production`
+- `BASE_URL`: Your backend URL (e.g., `https://venue-z8ti.onrender.com`)
+- `FRONTEND_URL`: Your frontend URL (e.g., `https://venueapp.vercel.app`)
+- `ALLOWED_ORIGINS`: Comma-separated list of allowed origins (e.g., `https://venueapp.vercel.app`)
+
+
+
 ## License
 
 See [LICENSE](LICENSE) for details.
