@@ -47,10 +47,13 @@ const updateMovieSchema = z.object({
         title: z.string().min(1).optional(),
         description: z.string().min(1).optional(),
         poster: z.string().url().optional(),
+        image: z.string().url().optional(), // Allow 'image' as alias for poster
         genre: z.string().optional(),
         runtime: z.string().optional(),
         releaseDate: z.coerce.date().optional(),
         rating: z.number().min(0).max(10).optional(),
+        price: z.number().min(0).optional(),
+        status: z.enum(['NOW_SHOWING', 'COMING_SOON']).optional(),
         isPublished: z.boolean().optional()
     })
 });

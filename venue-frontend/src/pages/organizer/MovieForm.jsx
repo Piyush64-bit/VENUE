@@ -21,8 +21,14 @@ const movieSchema = z.object({
   runtime: z.string().min(1, 'Runtime is required (e.g., 2h 30m)'),
   poster: z.string().url('Invalid URL').optional().or(z.literal('')),
   genre: z.string().optional(),
-  rating: z.preprocess((a) => parseFloat(z.string().parse(a)), z.number().min(0).max(10)),
-  price: z.preprocess((a) => parseInt(z.string().parse(a), 10), z.number().min(0))
+  rating: z.preprocess((a) => {
+    if (a === undefined || a === null || a === '') return 0;
+    return parseFloat(String(a));
+  }, z.number().min(0).max(10)),
+  price: z.preprocess((a) => {
+    if (a === undefined || a === null || a === '') return 0;
+    return parseInt(String(a), 10);
+  }, z.number().min(0))
 });
 
 const MovieForm = () => {
@@ -73,12 +79,19 @@ const MovieForm = () => {
       navigate('/organizer/dashboard');
     },
     onError: (err) => {
+      console.error('Movie mutation error:', err);
       showToast(err.response?.data?.message || 'Operation failed', 'error');
     }
   });
 
   const onSubmit = (data) => {
+    console.log('Submitting movie data:', data);
     mutation.mutate(data);
+  };
+  
+  const onInvalid = (errors) => {
+    console.error('Form validation errors:', errors);
+    showToast('Please check the form for errors', 'error');
   };
 
   return (
@@ -91,7 +104,7 @@ const MovieForm = () => {
         <Card className="bg-bgCard border-white/10 p-8">
           <h1 className="text-3xl font-bold text-white mb-8">{isEdit ? 'Edit Movie' : 'Create New Movie'}</h1>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
             <Input label="Title" error={errors.title?.message} {...register('title')} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

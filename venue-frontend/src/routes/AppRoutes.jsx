@@ -59,16 +59,16 @@ const AppRoutes = () => {
       <Route path="/event/:id/slots" element={<Slots type="event" />} />
       <Route path="/event/:id/seats" element={<Seats />} />
 
-      <Route path="/movie/:id" element={<EventDetails type="movie" />} />
-      <Route path="/movie/:id/slots" element={<Slots type="movie" />} />
-      <Route path="/movie/:id/seats" element={<Seats type="movie" />} />
+      <Route path="/movies/:id" element={<EventDetails type="movie" />} />
+      <Route path="/movies/:id/slots" element={<Slots type="movie" />} />
+      <Route path="/movies/:id/seats" element={<Seats type="movie" />} />
       
       <Route path="/event/:id/checkout" element={
         <ProtectedRoute>
           <Checkout type="event" />
         </ProtectedRoute>
       } />
-       <Route path="/movie/:id/checkout" element={
+       <Route path="/movies/:id/checkout" element={
         <ProtectedRoute>
           <Checkout type="movie" />
         </ProtectedRoute>

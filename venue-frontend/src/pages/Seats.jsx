@@ -16,8 +16,8 @@ const Seats = ({ type = 'event' }) => {
   const slot = location.state?.slot;
 
   const isMovie = type === 'movie';
-  const slotsRoute = isMovie ? `/movie/${id}/slots` : `/event/${id}/slots`;
-  const checkoutRoute = isMovie ? `/movie/${id}/checkout` : `/event/${id}/checkout`;
+  const slotsRoute = isMovie ? `/movies/${id}/slots` : `/event/${id}/slots`;
+  const checkoutRoute = isMovie ? `/movies/${id}/checkout` : `/event/${id}/checkout`;
 
   useEffect(() => {
     if (!slot) {

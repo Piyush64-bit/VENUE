@@ -9,7 +9,7 @@ const EventDetailsModal = ({ isOpen, onClose, item, type = 'event' }) => {
   const navigate = useNavigate();
   const { user, toggleFavorite } = useAuth();
   
-  const isFavorited = user?.favorites?.some(fav => fav.itemId === item._id);
+  const isFavorited = user?.favorites?.some(fav => fav.itemId === item?._id);
 
   const handleFavorite = (e) => {
       e.stopPropagation();
@@ -36,7 +36,7 @@ const EventDetailsModal = ({ isOpen, onClose, item, type = 'event' }) => {
         navigate(`/event/${item._id}/slots`);
     } else {
         // Assuming movies might share similar structure or have their own flow
-        navigate(`/movie/${item._id}`); // Or handle movie booking if different
+        navigate(`/movies/${item._id}`); // Or handle movie booking if different
     }
     // onClose(); // Optional: keep open or close? Usually close if navigating away.
   };

@@ -88,7 +88,7 @@ const Favorites = () => {
                     {favorites.map((fav, index) => {
                         const item = fav.itemId;
                         const isMovie = fav.itemType === 'Movie';
-                        const linkPath = isMovie ? `/movie/${item._id}` : `/event/${item._id}`;
+                        const linkPath = isMovie ? `/movies/${item._id}` : `/event/${item._id}`;
                         const displayDate = isMovie 
                             ? new Date(item.releaseDate)
                             : new Date(item.date || item.startDate);
@@ -106,12 +106,12 @@ const Favorites = () => {
                             <Link to={linkPath}>
                                 <Spotlight className="h-full bg-[#0a0a0a] border border-white/5 rounded-[2rem] overflow-hidden hover:border-white/20 transition-all duration-500 relative flex flex-col">
                                     {/* Image Section */}
-                                    <div className="relative h-64 overflow-hidden">
+                                    <div className="relative aspect-[2/3] overflow-hidden">
                                         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent z-10" />
                                         <img 
                                             src={isMovie ? item.poster : item.image} 
                                             alt={item.title} 
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0" 
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                                         />
                                         
                                         <div className="absolute top-4 left-4 z-20 flex gap-2">

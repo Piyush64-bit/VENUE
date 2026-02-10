@@ -134,7 +134,7 @@ const OrganizerMovies = () => {
                       </div>
                       <div>
                         <span className="text-textMuted block">Duration:</span>
-                        <span className="text-white font-medium">{movie.duration || 'N/A'} min</span>
+                        <span className="text-white font-medium">{movie.runtime || 'N/A'}</span>
                       </div>
                     </div>
 
