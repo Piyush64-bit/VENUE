@@ -35,7 +35,7 @@ const Slots = ({ type = 'event' }) => {
         setSlots(fetchedSlots);
         
         if (fetchedSlots.length > 0) {
-           const dates = [...new Set(fetchedSlots.map(s => new Date(s.startTime).toDateString()))];
+           const dates = [...new Set(fetchedSlots.map(s => new Date(s.date || s.startTime).toDateString()))];
            setSelectedDate(dates[0]);
         }
 
@@ -55,7 +55,10 @@ const Slots = ({ type = 'event' }) => {
   const slotsByDate = useMemo(() => {
      const groups = {};
      slots.forEach(slot => {
-        const dateKey = new Date(slot.startTime).toDateString();
+        // Use slot.date (preferred) or fallback to startTime if it's a date string
+        const dateStr = slot.date || slot.startTime;
+        const dateKey = new Date(dateStr).toDateString();
+        
         if (!groups[dateKey]) groups[dateKey] = [];
         groups[dateKey].push(slot);
      });
@@ -159,7 +162,14 @@ const Slots = ({ type = 'event' }) => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                      {slotsByDate[selectedDate].map((slot) => {
                         const isSelected = selectedSlot?._id === slot._id;
-                        const timeString = new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        
+                        // Handle both ISO string and HH:mm format
+                        let timeString = slot.startTime;
+                        if (timeString.includes('T') || timeString.includes('Z')) {
+                            // It's likely an ISO date string
+                            timeString = new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                        // Else assume it's already HH:mm or similar formatted string
                         
                         return (
                            <button

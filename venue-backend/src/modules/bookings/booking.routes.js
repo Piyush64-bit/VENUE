@@ -3,7 +3,8 @@ const {
   bookSlot,
   cancelBooking,
   getMyBookings,
-  getOrganizerBookings
+  getOrganizerBookings,
+  getBookingById
 } = require("./booking.controller");
 
 const verifyToken = require("../../middlewares/verifyToken");
@@ -144,6 +145,13 @@ router.get(
   verifyToken,
   checkRole(["ORGANIZER", "ADMIN"]),
   getOrganizerBookings
+);
+
+// Get single booking by ID
+router.get(
+  "/:id",
+  verifyToken,
+  getBookingById
 );
 
 module.exports = router;

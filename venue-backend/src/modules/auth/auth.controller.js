@@ -9,11 +9,12 @@ const registerUser = catchAsync(async (req, res, next) => {
   res.cookie('token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // basic protection
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.status(201).json(
-    new ApiResponse(201, { user, token }, 'User registered successfully')
+    new ApiResponse(201, { user }, 'User registered successfully')
   );
 });
 
@@ -25,12 +26,26 @@ const loginUser = catchAsync(async (req, res, next) => {
   res.cookie('token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.status(200).json(
-    new ApiResponse(200, { user, token }, 'Login successful')
+    new ApiResponse(200, { user }, 'Login successful')
   );
 });
 
-module.exports = { registerUser, loginUser };
+const logoutUser = catchAsync(async (req, res, next) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+  });
+
+  res.status(200).json(new ApiResponse(200, {}, 'User logged out successfully'));
+});
+
+const getCurrentUser = catchAsync(async (req, res, next) => {
+  res.status(200).json(new ApiResponse(200, { user: req.user }, 'Current user fetched successfully'));
+});
+
+module.exports = { registerUser, loginUser, logoutUser, getCurrentUser };

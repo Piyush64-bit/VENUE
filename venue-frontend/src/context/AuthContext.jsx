@@ -11,33 +11,28 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check authentication status on mount
   useEffect(() => {
-    // Check local storage for persistence
-    const storedUser = localStorage.getItem('venue_user');
-    const token = localStorage.getItem('token');
-    
-
-
-    if (storedUser && storedUser !== "undefined" && token) {
+    const checkAuth = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-
-        setUser(parsedUser);
+        const response = await api.get('/auth/me');
+        setUser(response.data.data.user);
       } catch (error) {
-        console.error("Failed to parse user from local storage", error);
-        localStorage.removeItem('venue_user');
+        // If 401 or other error, user is not logged in
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
+    };
 
-    }
-    setIsLoading(false);
+    checkAuth();
   }, []);
 
   // Socket management
   useEffect(() => {
     if (user) {
       socket.connect();
-      socket.emit('join', user.id); // Assuming user object has id
+      socket.emit('join', user.id);
 
       socket.on('waitlist:added', (data) => {
         showToast(`Added to waitlist for ${data.slotTime}`, 'info');
@@ -47,10 +42,8 @@ export const AuthProvider = ({ children }) => {
          showToast(`Good news! You've been promoted off the waitlist!`, 'success');
       });
 
-      // Handle connection errors silently
       socket.on('connect_error', (error) => {
         console.warn('Socket connection failed:', error.message);
-        // Don't show toast to user, just log it
       });
 
       return () => {
@@ -65,10 +58,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
     const data = response.data?.data || response.data || {};
-    const { user, token } = data;
+    const { user } = data;
     
-    localStorage.setItem('token', token);
-    localStorage.setItem('venue_user', JSON.stringify(user));
     setUser(user);
     return user;
   };
@@ -76,22 +67,25 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password, role = 'USER') => {
     const response = await api.post('/auth/register', { name, email, password, role });
     const data = response.data?.data || response.data || {};
-    const { user, token } = data;
+    const { user } = data;
     
-    localStorage.setItem('token', token);
-    localStorage.setItem('venue_user', JSON.stringify(user));
     setUser(user);
     return user;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('venue_user');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.get('/auth/logout');
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      setUser(null);
+      // socket.disconnect() is handled by the useEffect cleanup when user becomes null
+    }
   };
 
   const toggleFavorite = async (itemId, itemType) => {
-    if (!user) return; // Should handle auth check in UI
+    if (!user) return; 
     try {
         const response = await api.post('/users/favorites', { itemId, itemType });
         const data = response.data?.data || response.data || {};
@@ -99,7 +93,6 @@ export const AuthProvider = ({ children }) => {
         
         const updatedUser = { ...user, favorites: updatedFavorites };
         setUser(updatedUser);
-        localStorage.setItem('venue_user', JSON.stringify(updatedUser)); // Persist
         
         const action = data.action;
         showToast(action === 'added' ? 'Added to favorites' : 'Removed from favorites', 'success');
@@ -114,7 +107,6 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (updatedUserData) => {
     const updatedUser = { ...user, ...updatedUserData };
     setUser(updatedUser);
-    localStorage.setItem('venue_user', JSON.stringify(updatedUser));
   };
 
   return (

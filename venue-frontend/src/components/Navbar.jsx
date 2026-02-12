@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import logo from '../assets/venue-logo.png';
 import { Button } from './ui/Button';
-import { User, LogOut, LayoutDashboard, Ticket, Heart, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, LayoutDashboard, Ticket, Heart, Settings, ChevronDown, Home } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -67,6 +67,7 @@ const Navbar = () => {
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-8">
           <div className="flex items-center gap-6">
+
             {navLinks.map((link) => (
               <Link 
                 key={link.path}
@@ -85,7 +86,11 @@ const Navbar = () => {
           <div className="w-px h-6 bg-borderSubtle" />
 
           {user ? (
-            <div className="relative" ref={profileRef}>
+            <div className="flex items-center gap-3">
+              <Link to="/home" title="Home" className="p-2 text-textMuted hover:text-white hover:bg-white/5 rounded-full transition-all">
+                  <Home className="w-5 h-5" />
+              </Link>
+              <div className="relative" ref={profileRef}>
               <button 
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="group relative flex items-center gap-2 p-1 pl-1 pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 backdrop-blur-md"
@@ -215,6 +220,7 @@ const Navbar = () => {
                       </motion.div>
                   )}
               </AnimatePresence>
+            </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">

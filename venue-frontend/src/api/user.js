@@ -42,3 +42,9 @@ export const toggleFavorite = async (itemId, itemType) => {
     const response = await api.post('/users/favorites', { itemId, itemType });
     return response.data;
 };
+
+// Get single booking
+export const getBookingById = async (id) => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data;
+};

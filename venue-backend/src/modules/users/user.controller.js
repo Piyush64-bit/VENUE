@@ -60,15 +60,28 @@ exports.toggleFavorite = catchAsync(async (req, res, next) => {
 exports.getMyFavorites = catchAsync(async (req, res, next) => {
     const user = await User.findById(req.user.userId);
 
-    // Manually populate since we have mixed types (or use populate if refPath works well, but distinct queries might be safer for strict control)
-    // Let's rely on standard populate with refPath which we defined in model
-    // Note: To make refPath work effectively, we need to ensure the models 'Event' and 'Movie' are registered.
-    // We required them above so they should be registered.
+    const movieIds = user.favorites.filter(f => f.itemType === 'Movie').map(f => f.itemId);
+    const eventIds = user.favorites.filter(f => f.itemType === 'Event').map(f => f.itemId);
 
-    const populatedUser = await User.findById(req.user.userId).populate('favorites.itemId');
+    const [movies, events] = await Promise.all([
+        Movie.find({ _id: { $in: movieIds } }),
+        Event.find({ _id: { $in: eventIds } })
+    ]);
 
-    // Filter out nulls (in case item was deleted)
-    const validFavorites = populatedUser.favorites.filter(fav => fav.itemId !== null);
+    const movieMap = new Map(movies.map(m => [m._id.toString(), m]));
+    const eventMap = new Map(events.map(e => [e._id.toString(), e]));
+
+    const validFavorites = user.favorites.map(fav => {
+        const item = fav.itemType === 'Movie' ? movieMap.get(fav.itemId.toString()) : eventMap.get(fav.itemId.toString());
+        if (!item) return null;
+        // Construct the expected object structure
+        return {
+            _id: fav._id,
+            itemId: item, // Populated item
+            itemType: fav.itemType,
+            addedAt: fav.addedAt
+        };
+    }).filter(f => f !== null);
 
     res.status(200).json({
         status: 'success',
@@ -81,21 +94,12 @@ exports.getMyFavorites = catchAsync(async (req, res, next) => {
 
 // Get User Profile
 exports.getProfile = catchAsync(async (req, res, next) => {
-    console.log('🔍 getProfile called');
-    console.log('🔍 req.user:', req.user);
-    console.log('🔍 req.user.userId:', req.user?.userId);
-
     const user = await User.findById(req.user.userId).select('-password');
 
-    console.log('🔍 User found:', user ? 'YES' : 'NO');
-    console.log('🔍 User data:', user);
-
     if (!user) {
-        console.log('❌ User not found in database');
         return next(new AppError('User not found', 404));
     }
 
-    console.log('✅ Sending successful response');
     res.status(200).json(
         new ApiResponse(200, { user }, 'Profile fetched successfully')
     );
@@ -106,9 +110,12 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
     const { name, email } = req.body;
 
     // Check if email is being changed and if it's already taken
-    if (email && email !== req.user.email) {
+    if (email) {
+        // Find if ANY user has this email
         const existingUser = await User.findOne({ email });
-        if (existingUser) {
+
+        // If user exists AND it's not the current user, then it's taken
+        if (existingUser && existingUser._id.toString() !== req.user.userId) {
             return next(new AppError('Email already in use', 400));
         }
     }

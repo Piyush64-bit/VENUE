@@ -22,10 +22,16 @@ const bookingSchema = new mongoose.Schema(
       enum: ["CONFIRMED", "CANCELLED"],
       default: "CONFIRMED",
     },
-    seats: [{
-      type: String,
+    seats: {
+      type: [String],
       required: true
-    }]
+    },
+    paymentId: {
+      type: String,
+    },
+    transactionId: {
+      type: String,
+    }
   },
   { timestamps: true }
 );

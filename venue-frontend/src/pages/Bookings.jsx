@@ -29,7 +29,7 @@ const Bookings = () => {
 
   const handleCancel = async (bookingId) => {
     try {
-        await api.delete(`/bookings/${bookingId}`);
+        await api.patch(`/bookings/${bookingId}/cancel`);
         showToast("Booking cancelled", "success");
         fetchBookings(); // Refresh list
     } catch (error) {
@@ -46,8 +46,8 @@ const Bookings = () => {
       {bookings.length > 0 ? (
         <div className="space-y-6">
           {bookings.map((booking) => {
-            // Helper to get title/image from event OR movie
-            const getItem = (slot) => slot?.eventId || slot?.movieId || {};
+            // Helper to get title/image from event OR movie (via parentId)
+            const getItem = (slot) => slot?.parentId || slot?.eventId || slot?.movieId || {};
             const item = getItem(booking.slotId);
 
             return (
@@ -59,7 +59,7 @@ const Bookings = () => {
     <Card className="flex flex-col md:flex-row gap-6 p-6">
        <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden flex-shrink-0">
           <img 
-            src={item.image || item.poster || 'https://via.placeholder.com/200'} 
+            src={item.image || item.poster || 'https://placehold.co/200x200?text=Venue'} 
             alt={item.title || 'Event'} 
             className="w-full h-full object-cover"
           />
@@ -67,10 +67,10 @@ const Bookings = () => {
        
        <div className="flex-1 flex flex-col justify-between">
           <div>
-             <div className="flex justify-between items-start">
-                <h3 className="text-xl font-bold text-white mb-2">{item.title || 'Unknown Event'}</h3>
+                         <div className="flex justify-between items-start">
+                            <h3 className="text-xl font-bold text-white mb-2">{item.title || 'Unknown Event'}</h3>
                             <span className={`px-2 py-1 rounded text-xs uppercase font-bold tracking-wide ${
-                                booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-500' : // backend returns UPPERCASE
+                                booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-500' : 
                                 booking.status === 'CANCELLED' ? 'bg-red-500/20 text-red-500' :
                                 'bg-gray-500/20 text-gray-500'
                             }`}>
@@ -78,20 +78,32 @@ const Bookings = () => {
                             </span>
                          </div>
                          <p className="text-textMuted text-sm mb-4">
-                            {/* Fix Date Access */}
-                            {new Date(booking.slotId?.startTime).toLocaleString()}
+                            {(() => {
+                                const dateStr = booking.slotId?.date || booking.slotId?.startTime;
+                                if (!dateStr) return 'Date N/A';
+                                const dateObj = new Date(dateStr);
+                                const timeStr = booking.slotId?.startTime?.includes('T') 
+                                    ? new Date(booking.slotId.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                    : booking.slotId?.startTime;
+                                
+                                return isNaN(dateObj.getTime()) 
+                                    ? `${booking.slotId?.startTime || ''}`
+                                    : `${dateObj.toDateString()} • ${timeStr || ''}`;
+                            })()}
                          </p>
                          <div className="flex flex-wrap gap-2 mb-4">
-                            {/* Fix Seat Mapping */}
                             {booking.seats?.map((seat, i) => (
                                <span key={i} className="px-2 py-1 bg-bgSecondary border border-borderSubtle rounded text-xs text-textMuted">
-                                  {seat.label}
+                                  {typeof seat === 'object' ? seat.label : seat}
                                </span>
                             ))}
                          </div>
                       </div>
                       
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-3">
+                         <Button variant="outline" className="text-sm px-4 py-2 h-auto" onClick={() => window.location.href=`/bookings/${booking._id}/confirmation`}>
+                            View Ticket
+                         </Button>
                          {booking.status !== 'CANCELLED' && (
                              <Button variant="danger" className="text-sm px-4 py-2 h-auto" onClick={() => handleCancel(booking._id)}>
                                 Cancel Booking

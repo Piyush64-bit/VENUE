@@ -4,7 +4,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
-const xss = require("xss-clean");
 
 const connectDB = require("./config/db");
 const { apiLimiter, publicLimiter } = require("./middlewares/rateLimiter");
@@ -66,8 +65,6 @@ app.use(
     replaceWith: "_"
   })
 );
-
-app.use(xss());
 
 /* ======================================================
    DATABASE

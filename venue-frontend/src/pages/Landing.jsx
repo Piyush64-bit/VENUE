@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 
 import SEO from '../components/ui/SEO';
@@ -187,6 +188,8 @@ const Landing = () => {
              >
                Movies
              </button>
+
+
              
              {/* Tertiary Login Link */}
              {!user && (

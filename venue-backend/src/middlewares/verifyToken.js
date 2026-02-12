@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const AppError = require('../utils/AppError');
+const User = require('../modules/users/user.model');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   let token;
 
   if (req.cookies.token) {
@@ -16,11 +17,16 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('🔐 Token decoded:', decoded);
-    req.user = decoded;
+    // Check if user still exists
+    const currentUser = await User.findById(decoded.userId);
+    if (!currentUser) {
+      return next(new AppError('The user belonging to this token no longer exists.', 401));
+    }
+
+    req.user = currentUser;
+    req.user.userId = currentUser._id;
     next();
   } catch (error) {
-    console.log('❌ Token verification failed:', error.message);
     return next(new AppError('Invalid token or session expired', 401));
   }
 };

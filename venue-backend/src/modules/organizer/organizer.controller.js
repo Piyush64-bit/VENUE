@@ -28,8 +28,15 @@ exports.getProfile = catchAsync(async (req, res, next) => {
 exports.updateProfile = catchAsync(async (req, res, next) => {
     const { name, email } = req.body;
 
+    // Get current user to compare email
+    const currentUser = await User.findById(req.user.userId).select('email');
+
+    if (!currentUser) {
+        return next(new AppError('User not found', 404));
+    }
+
     // Check if email is being changed and if it already exists
-    if (email && email !== req.user.email) {
+    if (email && email !== currentUser.email) {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return next(new AppError('Email already in use', 400));
@@ -168,22 +175,6 @@ exports.getOrganizerStats = catchAsync(async (req, res, next) => {
     });
 });
 
-exports.uploadImage = catchAsync(async (req, res, next) => {
-    if (!req.file) {
-        return next(new AppError('No file uploaded', 400));
-    }
-
-    // Cloudinary URL
-    const fileUrl = req.file.path;
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            url: fileUrl
-        }
-    });
-});
-
 exports.createEvent = catchAsync(async (req, res, next) => {
     const eventData = {
         ...req.body,
@@ -237,31 +228,50 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, event, 'Event updated successfully'));
 });
 
-exports.deleteEvent = catchAsync(async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+exports.deleteEvent = async (req, res, next) => {
     try {
-        const event = await Event.findOneAndDelete(
-            { _id: req.params.id, organizerId: req.user.userId }
-        ).session(session);
+        // 1. Check for active bookings before deletion (Moved OUT of transaction to avoid deadlocks/hangs)
+        const eventSlots = await Slot.find({ parentId: req.params.id, parentType: 'Event' }).select('_id');
+        const slotIds = eventSlots.map(slot => slot._id);
 
-        if (!event) {
-            throw new AppError('Event not found or access denied', 404);
+        if (slotIds.length > 0) {
+            const activeBookingsCount = await Booking.countDocuments({
+                slotId: { $in: slotIds },
+                status: 'CONFIRMED'
+            });
+
+            if (activeBookingsCount > 0) {
+                throw new AppError('Cannot delete event with active bookings', 409);
+            }
         }
 
-        // Delete associated slots
-        await Slot.deleteMany({ parentId: event._id, parentType: 'Event' }).session(session);
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        await session.commitTransaction();
-        res.status(200).json(new ApiResponse(200, null, 'Event and associated slots deleted successfully'));
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
+        try {
+            const event = await Event.findOneAndDelete(
+                { _id: req.params.id, organizerId: req.user.userId }
+            ).session(session);
+
+            if (!event) {
+                throw new AppError('Event not found or access denied', 404);
+            }
+
+            // Delete associated slots
+            await Slot.deleteMany({ parentId: event._id, parentType: 'Event' }).session(session);
+
+            await session.commitTransaction();
+            res.status(200).json(new ApiResponse(200, null, 'Event and associated slots deleted successfully'));
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
+    } catch (err) {
+        next(err);
     }
-});
+};
 
 exports.toggleEventPublish = catchAsync(async (req, res, next) => {
     const { publish } = req.body; // true to publish, false to unpublish
@@ -341,6 +351,22 @@ exports.deleteMovie = catchAsync(async (req, res, next) => {
     session.startTransaction();
 
     try {
+        // 1. Check for active bookings before deletion
+        // Find all slots for this movie
+        const movieSlots = await Slot.find({ parentId: req.params.id, parentType: 'Movie' }).select('_id');
+        const slotIds = movieSlots.map(slot => slot._id);
+
+        if (slotIds.length > 0) {
+            const activeBookingsCount = await Booking.countDocuments({
+                slotId: { $in: slotIds },
+                status: 'CONFIRMED'
+            });
+
+            if (activeBookingsCount > 0) {
+                throw new AppError('Cannot delete movie with active bookings', 409);
+            }
+        }
+
         const movie = await Movie.findOneAndDelete(
             { _id: req.params.id, organizer: req.user.userId }
         ).session(session);
@@ -401,9 +427,9 @@ exports.createSlot = catchAsync(async (req, res, next) => {
     // Verify ownership of parent
     let parent;
     if (parentType === 'Event') {
-        parent = await Event.findOne({ _id: parentId, organizerId: req.user.userId });
+        parent = await Event.findOne({ _id: parentId, organizerId: req.user._id });
     } else if (parentType === 'Movie') {
-        parent = await Movie.findOne({ _id: parentId, organizer: req.user.userId });
+        parent = await Movie.findOne({ _id: parentId, organizer: req.user._id });
     } else {
         return next(new AppError('Invalid parent type', 400));
     }
@@ -418,6 +444,36 @@ exports.createSlot = catchAsync(async (req, res, next) => {
         parentId,
         availableSeats: capacity // Initial availability = capacity
     };
+
+    // ---------------------------------------------------------
+    // OVERLAP VALIDATION (Fix for double-booking)
+    // ---------------------------------------------------------
+
+    // Parse times for comparison
+    const newDate = new Date(req.body.date);
+    const newStartTime = req.body.startTime; // "HH:mm"
+    const newEndTime = req.body.endTime;     // "HH:mm"
+
+    // Query for existing slots on the same day for same parent
+    // Overlap Logic: (StartA < EndB) && (EndA > StartB)
+    const existingSlot = await Slot.findOne({
+        parentId,
+        parentType,
+        date: newDate, // Matches specific date
+        $and: [
+            { startTime: { $lt: newEndTime } },
+            { endTime: { $gt: newStartTime } }
+        ]
+    });
+
+    if (existingSlot) {
+        return next(new AppError(
+            `Slot overlaps with an existing slot (${existingSlot.startTime} - ${existingSlot.endTime})`,
+            409
+        ));
+    }
+
+    // ---------------------------------------------------------
 
     const slot = await Slot.create(slotData);
 
@@ -490,6 +546,7 @@ exports.deleteSlot = catchAsync(async (req, res, next) => {
 
     res.status(200).json(new ApiResponse(200, null, 'Slot deleted successfully'));
 });
+
 exports.updateSlot = catchAsync(async (req, res, next) => {
     // 1. Find slot
     const slot = await Slot.findById(req.params.id);
@@ -521,4 +578,93 @@ exports.updateSlot = catchAsync(async (req, res, next) => {
     );
 
     res.status(200).json(new ApiResponse(200, updatedSlot, 'Slot updated successfully'));
+});
+
+/* ======================================================
+   AUTO SLOT GENERATION (DEMO/PORTFOLIO)
+   ====================================================== */
+
+const generateAutoSlots = require('../../utils/autoSlotGenerator');
+
+/**
+ * Auto-generate slots for movies or events
+ * Designed for portfolio demo - generates 90 days of slots
+ */
+exports.autoGenerateSlots = catchAsync(async (req, res, next) => {
+    let { parentType, parentId } = req.body;
+
+    // Handle route params for context-aware generation
+    if (req.params.eventId) {
+        parentId = req.params.eventId;
+        parentType = 'Event';
+    } else if (req.params.movieId) {
+        parentId = req.params.movieId;
+        parentType = 'Movie';
+    }
+
+    if (!parentType || !parentId) {
+        return next(new AppError('Parent type and ID are required', 400));
+    }
+
+    // Verify ownership of parent
+    let parent;
+    if (parentType === 'Event') {
+        parent = await Event.findOne({ _id: parentId, organizerId: req.user._id });
+    } else if (parentType === 'Movie') {
+        parent = await Movie.findOne({ _id: parentId, organizer: req.user._id });
+    } else {
+        return next(new AppError('Invalid parent type', 400));
+    }
+
+    if (!parent) {
+        return next(new AppError('Parent resource not found or access denied', 404));
+    }
+
+    // Determine date range
+    let startDate, endDate;
+    if (parentType === 'Event') {
+        // For events: use event's date range
+        startDate = new Date(parent.startDate);
+        endDate = new Date(parent.endDate);
+    } else {
+        // For movies: generate for next 90 days (portfolio demo)
+        startDate = new Date();
+        endDate = new Date();
+        endDate.setDate(endDate.getDate() + 90); // 3 months of data
+    }
+
+    // Get existing slots to avoid duplicates
+    const existingSlots = await Slot.find({ parentId, parentType });
+    const existingDates = new Set(
+        existingSlots.map(s => new Date(s.date).toDateString())
+    );
+
+    // Generate slots using utility function
+    const autoSlots = generateAutoSlots(parentType, startDate, endDate);
+
+    // Filter out dates that already have slots
+    const slotsToCreate = autoSlots.filter(slot =>
+        !existingDates.has(new Date(slot.date).toDateString())
+    );
+
+    if (slotsToCreate.length === 0) {
+        return next(new AppError('All dates already have slots generated', 400));
+    }
+
+    // Add parent references to each slot
+    const finalSlots = slotsToCreate.map(slot => ({
+        ...slot,
+        parentType,
+        parentId
+    }));
+
+    // Bulk insert all slots
+    const createdSlots = await Slot.insertMany(finalSlots);
+
+    res.status(201).json(
+        new ApiResponse(201, {
+            count: createdSlots.length,
+            slots: createdSlots
+        }, `Auto-generated ${createdSlots.length} slots successfully`)
+    );
 });

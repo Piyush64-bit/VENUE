@@ -5,6 +5,7 @@ import { Search, Grid, List, Play, Star, ArrowUpRight } from 'lucide-react';
 
 
 import api from '../api/axios';
+import { movieApi } from '../api/movies';
 import { Skeleton } from '../components/ui/Skeleton';
 import SEO from '../components/ui/SEO';
 import NoiseOverlay from '../components/visuals/NoiseOverlay';
@@ -44,14 +45,14 @@ const Movies = () => {
 
   const { data: movies = [], isLoading, isError } = useQuery({
     queryKey: ['movies'],
-    queryFn: async () => {
-      const response = await api.get('/movies');
-      return response.data?.data?.movies || response.data?.movies || [];
-    },
+    queryFn: movieApi.getAll,
     staleTime: 1000 * 60 * 5,
   });
 
   const processedMovies = useMemo(() => {
+    if (!movies || typeof movies[Symbol.iterator] !== 'function') {
+        return [];
+    }
     let result = [...movies];
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();

@@ -19,11 +19,17 @@ const bookSlot = catchAsync(async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const { slotId, quantity = 1 } = req.body;
-    const userId = req.user.userId;
+    const { slotId, quantity = 1, seats } = req.body;
+    const userId = req.user._id;
+
+    console.log("Create Booking Payload:", { slotId, quantity, seats, userId });
 
     if (quantity < 1) {
       throw new AppError("Quantity must be at least 1", 400);
+    }
+
+    if (!seats || !Array.isArray(seats)) {
+      throw new AppError("Seats must be an array", 400);
     }
 
     if (!mongoose.Types.ObjectId.isValid(slotId)) {
@@ -50,16 +56,17 @@ const bookSlot = catchAsync(async (req, res, next) => {
       throw new AppError("Event/Movie is not active or available for booking", 404);
     }
 
-    // 2. Prevent duplicate booking (User Logic)
-    const existingBooking = await Booking.findOne({
-      userId,
-      slotId,
-      status: "CONFIRMED",
-    }).session(session);
+    // 2. Prevent duplicate booking (User Logic) - REMOVED
+    // We want to allow users to book multiple times if they wish (e.g. buying more tickets later)
+    // const existingBooking = await Booking.findOne({
+    //   userId,
+    //   slotId,
+    //   status: "CONFIRMED",
+    // }).session(session);
 
-    if (existingBooking) {
-      throw new AppError("You have already booked this slot", 400);
-    }
+    // if (existingBooking) {
+    //   throw new AppError("You have already booked this slot", 400);
+    // }
 
     // 3. Atomic capacity check + decrement
     // Use availableSeats instead of remainingCapacity
@@ -117,8 +124,10 @@ const bookSlot = catchAsync(async (req, res, next) => {
       userId,
       slotId,
       quantity,
-      seats: req.body.seats || [],
+      seats: seats || [], // Explicitly pass from body
       status: "CONFIRMED",
+      paymentId: `PAY_${Date.now()}`,
+      transactionId: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`
     }], { session });
 
     await session.commitTransaction();
@@ -130,7 +139,17 @@ const bookSlot = catchAsync(async (req, res, next) => {
     //   console.error("Failed to send email", err);
     // });
 
-    res.status(201).json(new ApiResponse(201, booking[0], 'Booking created successfully'));
+    // Populate the booking before sending response
+    await booking.populate({
+      path: 'slotId',
+      select: 'startTime endTime date parentId parentType price',
+      populate: {
+        path: 'parentId',
+        select: 'title location image poster price'
+      }
+    });
+
+    res.status(201).json(new ApiResponse(201, booking, 'Booking created successfully'));
 
   } catch (error) {
     if (session.inTransaction()) {
@@ -143,6 +162,36 @@ const bookSlot = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * GET SINGLE BOOKING
+ */
+const getBookingById = catchAsync(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    throw new AppError('Invalid Booking ID format', 400);
+  }
+
+  const booking = await Booking.findById(req.params.id)
+    .populate({
+      path: 'slotId',
+      select: 'startTime endTime date parentId parentType price', // Added price
+      populate: {
+        path: 'parentId',
+        select: 'title location image poster price' // Added price
+      }
+    });
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  // Authorization check: Ensure user owns this booking
+  if (booking.userId.toString() !== req.user.userId) {
+    throw new AppError('Not authorized to view this booking', 403);
+  }
+
+  return res.status(200).json(new ApiResponse(200, booking, 'Booking details fetched successfully'));
+});
+
+/**
  * CANCEL BOOKING + PROMOTE WAITLIST
  */
 const cancelBooking = catchAsync(async (req, res, next) => {
@@ -151,7 +200,7 @@ const cancelBooking = catchAsync(async (req, res, next) => {
 
   try {
     const bookingId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user._id;
 
     // 1. Find booking
     const booking = await Booking.findOne({
@@ -208,6 +257,8 @@ const cancelBooking = catchAsync(async (req, res, next) => {
             slotId: slot._id,
             quantity: nextUser.quantity,
             status: "CONFIRMED",
+            paymentId: `PAY_WL_${Date.now()}`,
+            transactionId: `TXN_WL_${Date.now()}`
           }], { session });
 
           promotedBooking = newBooking;
@@ -265,7 +316,7 @@ const cancelBooking = catchAsync(async (req, res, next) => {
 });
 
 const getMyBookings = catchAsync(async (req, res, next) => {
-  const userId = req.user.userId;
+  const userId = req.user._id;
 
   const bookings = await Booking.find({ userId })
     .populate({
@@ -284,7 +335,7 @@ const getMyBookings = catchAsync(async (req, res, next) => {
 });
 
 const getOrganizerBookings = catchAsync(async (req, res, next) => {
-  const organizerId = req.user.userId;
+  const organizerId = req.user._id;
 
   // 1. Find all events by this organizer
   const events = await Event.find({ organizerId }).select('_id title');
@@ -324,6 +375,7 @@ const getOrganizerBookings = catchAsync(async (req, res, next) => {
 
 module.exports = {
   bookSlot,
+  getBookingById,
   cancelBooking,
   getMyBookings,
   getOrganizerBookings

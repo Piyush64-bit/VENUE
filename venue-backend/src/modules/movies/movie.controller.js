@@ -99,8 +99,9 @@ const getMovieSlots = catchAsync(async (req, res, next) => {
     }
 
     const slots = await Slot.find({
-        movieId: req.params.id,
-        remainingCapacity: { $gt: 0 } // Only available slots
+        parentId: req.params.id,
+        parentType: 'Movie',
+        availableSeats: { $gt: 0 } // Only available slots
     }).sort({ date: 1, startTime: 1 });
 
     return res.status(200).json(

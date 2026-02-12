@@ -50,10 +50,28 @@ const SlotManager = ({ type }) => { // type: 'event' | 'movie'
     }
   });
 
+  // Auto-generate mutation (Demo/Portfolio feature)
+  const autoGenerateMutation = useMutation({
+    mutationFn: () => organizerApi.autoGenerateSlots(id, type),
+    onSuccess: (response) => {
+      const count = response.data?.count || 0;
+      showToast(`🎉 Generated ${count} slots successfully!`, 'success');
+      queryClient.invalidateQueries(['organizer-slots', id]);
+      setShowAutoModal(false);
+    },
+    onError: (err) => {
+      showToast(err.response?.data?.message || 'Auto-generation failed', 'error');
+    }
+  });
+
+  // Modal state
+  const [showAutoModal, setShowAutoModal] = useState(false);
+
   // Form
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   const onSubmit = (data) => {
+
     // Combine date + time if needed, or backend handles it.
     // Backend expects: date (ISO), startTime (string), endTime (string), capacity (number)
     createMutation.mutate(data);
@@ -71,10 +89,68 @@ const SlotManager = ({ type }) => { // type: 'event' | 'movie'
                  <h1 className="text-3xl font-bold text-white mb-2">Manage Slots</h1>
                  <p className="text-textMuted">Add or remove showtimes/sessions for this {type}.</p>
             </div>
-            <Button variant="primary" onClick={() => setIsAdding(!isAdding)}>
-                {isAdding ? 'Cancel' : 'Add Slot'}
-            </Button>
+            <div className="flex gap-3">
+                <Button 
+                    variant="secondary" 
+                    onClick={() => setShowAutoModal(true)}
+                    className="border-accentOrange text-accentOrange hover:bg-accentOrange/10"
+                >
+                    ⚡ Auto Generate (Demo)
+                </Button>
+                <Button variant="primary" onClick={() => setIsAdding(!isAdding)}>
+                    {isAdding ? 'Cancel' : 'Add Slot'}
+                </Button>
+            </div>
         </div>
+
+        {/* Auto-Generate Confirmation Modal */}
+        {showAutoModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
+                <Card className="bg-bgCard border-white/10 p-6 max-w-md mx-4 animate-in zoom-in-95">
+                    <h3 className="text-xl font-bold text-white mb-4">🎬 Auto-Generate Slots?</h3>
+                    <p className="text-textMuted mb-2">
+                        This will automatically create <span className="text-white font-bold">3 slots per day</span> for this {type}:
+                    </p>
+                    <ul className="text-sm text-textMuted mb-6 space-y-1 ml-4">
+                        {type === 'movie' ? (
+                            <>
+                                <li>• Morning: 10:00-13:00</li>
+                                <li>• Matinee: 14:00-17:00</li>
+                                <li>• Evening: 18:00-21:00</li>
+                                <li className="text-accentOrange mt-2">• 90 days of slots (270 total)</li>
+                            </>
+                        ) : (
+                            <>
+                                <li>• Morning: 09:00-12:00</li>
+                                <li>• Afternoon: 14:00-17:00</li>
+                                <li>• Evening: 19:00-22:00</li>
+                                <li className="text-accentOrange mt-2">• Based on event date range</li>
+                            </>
+                        )}
+                    </ul>
+                    <p className="text-xs text-textMuted/70 mb-6">
+                        Days with existing slots will be skipped.
+                    </p>
+                    <div className="flex justify-end gap-4">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => setShowAutoModal(false)}
+                            disabled={autoGenerateMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="primary" 
+                            onClick={() => autoGenerateMutation.mutate()}
+                            isLoading={autoGenerateMutation.isPending}
+                        >
+                            Generate Slots
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+        )}
+
 
         {/* Add Slot Form */}
         {isAdding && (
