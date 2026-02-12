@@ -74,7 +74,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/confirmation" element={
+      <Route path="/bookings/:id/confirmation" element={
         <ProtectedRoute>
            <Confirmation />
         </ProtectedRoute>

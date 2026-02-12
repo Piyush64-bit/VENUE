@@ -82,12 +82,15 @@ const getEventById = async (id) => {
 };
 
 const getEventSlots = async (eventId, activeOnly = false) => {
-  let query = { eventId };
+  let query = {
+    parentId: eventId,
+    parentType: 'Event'
+  };
 
   if (activeOnly) {
     query = {
       ...query,
-      remainingCapacity: { $gt: 0 },
+      availableSeats: { $gt: 0 },
       // Optional: Filter out past slots
       // startTime: { $gte: new Date() } // Depends on date/time format stored
     };

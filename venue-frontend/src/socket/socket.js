@@ -16,5 +16,7 @@ export const socket = io(getSocketUrl(), {
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 5,
-    timeout: 10000,
+    timeout: 20000,
+    transports: ['websocket', 'polling'], // Explicitly define transports
+    withCredentials: true,
 });

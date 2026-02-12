@@ -31,7 +31,7 @@ const EventCard = ({ event, type = 'event' }) => {
   const startTime = formatTime(startDate);
 
   return (
-    <Link to={`/event/${_id}`} className="block h-full group">
+    <Link to={type === 'movie' ? `/movies/${_id}` : `/event/${_id}`} className="block h-full group">
       <motion.div
         whileHover={{ y: -8 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}

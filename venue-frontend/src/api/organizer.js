@@ -76,6 +76,16 @@ export const organizerApi = {
         const response = await api.patch(`/organizer/slots/${id}`, data);
         return response.data;
     },
+    autoGenerateSlots: async (parentId, parentType) => {
+        // parentType: 'event' or 'movie'
+        const endpoint = parentType === 'event'
+            ? `/organizer/events/${parentId}/slots/auto-generate`
+            : `/organizer/movies/${parentId}/slots/auto-generate`;
+
+        const response = await api.post(endpoint);
+        return response.data;
+    },
+
 
     // Profile & Settings
     getProfile: async () => {

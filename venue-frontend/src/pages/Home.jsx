@@ -115,7 +115,6 @@ const Home = () => {
   const { data: movies = [], isLoading: isLoadingMovies } = useQuery({
     queryKey: ['movies'], // Fetch movies
     queryFn: movieApi.getAll,
-    select: (data) => data.data?.movies || [],
     staleTime: 1000 * 60 * 10,
   });
 

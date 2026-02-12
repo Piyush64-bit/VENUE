@@ -25,7 +25,7 @@ const Seats = ({ type = 'event' }) => {
       return;
     }
 
-    const fetchSeats = async () => {
+    const fetchSeatsAndDetails = async () => {
       // Immediate check for mock slots
       if (slot.isMock) {
           console.warn("Generating Mock Seats for Demo Slot");
@@ -36,22 +36,42 @@ const Seats = ({ type = 'event' }) => {
       }
 
       try {
-        const response = await api.get(`/slots/${slot._id}/seats`);
-        if (response.data && response.data.length > 0) {
-            setSeats(response.data);
+        const [seatsRes, parentRes] = await Promise.all([
+             api.get(`/slots/${slot._id}/seats`),
+             api.get(`/${isMovie ? 'movies' : 'events'}/${id}`)
+        ]);
+
+        if (seatsRes.data && seatsRes.data.length > 0) {
+            setSeats(seatsRes.data);
         } else {
-            throw new Error("No seats found");
+            // If API returns empty array, we might still want to show grid but empty? 
+            // Or handle as error. Existing logic throws error.
+            // Let's assume empty array is valid seat config if backend returns it? 
+            // For now sticking to existing error logic but improved.
+             throw new Error("No seats found");
         }
+
+        // Update slot price from parent if missing
+        const parentData = parentRes.data.data?.event || parentRes.data.data?.movie || parentRes.data.data;
+        if (slot && parentData?.price) {
+            slot.price = parentData.price;
+        }
+
       } catch (error) {
-        console.error("Failed to load seats", error);
-        showToast("Failed to load seats. Please try again.", "error");
+        console.error("Failed to load data", error);
+        // Fallback for demo if API fails
+        if (error.response?.status === 404) {
+             showToast("Slot not found", "error");
+        } else {
+             showToast("Failed to load seats. Please try again.", "error");
+        }
         setSeats([]); 
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSeats();
+    fetchSeatsAndDetails();
   }, [slot, id, navigate, slotsRoute]);
 
   const generateMockSeats = () => {
@@ -117,7 +137,33 @@ const Seats = ({ type = 'event' }) => {
              </button>
              <div className="text-right">
                 <p className="text-xs font-bold text-accentOrange uppercase tracking-widest">Selected Time</p>
-                <p className="font-mono text-lg">{slot?.startTime && new Date(slot.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                <div className="flex flex-col items-end">
+                    <p className="font-mono text-lg leading-none">
+                        {(() => {
+                            if (!slot) return '--:--';
+                            // Handle time
+                            let timeStr = slot.startTime;
+                            if (timeStr.includes('T') || timeStr.includes('Z')) {
+                                timeStr = new Date(timeStr).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            }
+                            return timeStr;
+                        })()}
+                    </p>
+                    <p className="text-xs text-white/50 font-medium">
+                        {(() => {
+                            if (!slot) return '';
+                            // Handle date
+                            const dateStr = slot.date || slot.startTime;
+                            if (!dateStr) return '';
+                            const dateObj = new Date(dateStr);
+                            return isNaN(dateObj.getTime()) ? '' : dateObj.toLocaleDateString(undefined, { 
+                                weekday: 'short', 
+                                month: 'short', 
+                                day: 'numeric' 
+                            });
+                        })()}
+                    </p>
+                </div>
              </div>
           </div>
        </div>
@@ -197,7 +243,7 @@ const Seats = ({ type = 'event' }) => {
              >
                 <div className="flex flex-col">
                    <div className="flex items-baseline gap-2">
-                       <span className="text-2xl font-black text-white">${selectedSeats.length * 25}</span>
+                       <span className="text-2xl font-black text-white">₹{selectedSeats.length * (slot?.price || 0)}</span>
                        <span className="text-white/40 text-xs font-medium uppercase tracking-wider">for {selectedSeats.length} seats</span>
                    </div>
                 </div>

@@ -11,13 +11,20 @@ const Checkout = ({ type = 'event' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { slot, selectedSeats } = location.state || {}; 
-
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [eventData, setEventData] = useState(null);
-
+  
   const isMovie = type === 'movie';
   const endpoint = isMovie ? `/movies/${id}` : `/events/${id}`;
 
+  useEffect(() => {
+    if (!slot || !selectedSeats) {
+        showToast("Session expired. Please select seats again.", "warning");
+        // Use a safe redirect if endpoint is somehow problematic, but it should be fine now
+        navigate(endpoint); 
+    }
+  }, [slot, selectedSeats, navigate, endpoint]); 
+
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [eventData, setEventData] = useState(null);
   useEffect(() => {
     const fetchEvent = async () => {
         try {
@@ -36,7 +43,7 @@ const Checkout = ({ type = 'event' }) => {
   const seatCount = selectedSeats?.length || 0;
   // Use event price if available, else default to 25. 
   // Note: Movies might not have price in model yet, so default works.
-  const basePrice = eventData?.price || 25;
+  const basePrice = eventData?.price !== undefined ? eventData.price : 25;
   const subtotal = seatCount * basePrice;
   const bookingFee = subtotal * 0.10; // 10% mock fee
   const tax = (subtotal + bookingFee) * 0.18; // 18% tax
@@ -57,20 +64,26 @@ const Checkout = ({ type = 'event' }) => {
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate gateway delay
 
       const bookingData = {
-        eventId: isMovie ? undefined : id, // Backend might ignore mismatch but cleaner to be explicit if model allowed it. Actually backend Booking only needs slotId.
-        // Wait, backend Booking model doesn't require eventId, but we might want to send it if valid?
-        // Actually, let's just send what we have. API ignores extra fields usually.
-        // But for Movie, we don't have eventId. 
         slotId: slot?._id,
-        quantity: selectedSeats?.length || 1,
-        seats: selectedSeats?.map(s => ({ label: s.label })) || [],
+        quantity: Number(selectedSeats?.length || 1),
+        seats: selectedSeats?.map(s => s.label) || [], // Ensure array of strings
       };
 
-      await api.post('/bookings', bookingData);
+      // Only add eventId if it's not a movie, to avoid schema warnings if strict
+      if (!isMovie && id) {
+          bookingData.eventId = id;
+      }
+
+      const response = await api.post('/bookings', bookingData);
       
+      const newBooking = response.data.data || response.data.booking || response.data;
+      const bookingId = newBooking._id || newBooking[0]?._id;
+
       showToast("Payment Successful!", "success");
-      const confirmationRoute = isMovie ? `/movies/${id}/confirmation` : `/event/${id}/confirmation`;
-      navigate(confirmationRoute, { state: { bookingData, totalAmount } });
+      // Navigate to booking-specific confirmation page
+      navigate(`/bookings/${bookingId}/confirmation`, { 
+        state: { bookingData: newBooking, totalAmount } 
+      });
 
     } catch (error) {
       console.error("Booking failed", error);
@@ -92,7 +105,7 @@ const Checkout = ({ type = 'event' }) => {
     <div className="min-h-screen bg-bgPrimary text-white relative flex justify-center">
        {/* Background Ambience */}
        <div className="fixed inset-0 z-0">
-          <img src={eventData.image} alt="" className="w-full h-full object-cover opacity-[0.15] blur-3xl scale-110" />
+          <img src={isMovie ? eventData.poster : eventData.image} alt="" className="w-full h-full object-cover opacity-[0.15] blur-3xl scale-110" />
           <div className="absolute inset-0 bg-gradient-to-t from-bgPrimary via-bgPrimary/95 to-bgPrimary/80" />
        </div>
 
@@ -114,7 +127,7 @@ const Checkout = ({ type = 'event' }) => {
                  className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl"
                >
                   <div className="aspect-video relative">
-                      <img src={eventData.image} alt="" className="w-full h-full object-cover" />
+                      <img src={isMovie ? eventData.poster : eventData.image} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute bottom-6 left-6">
                           <h2 className="text-2xl font-black uppercase leading-none drop-shadow-md">{eventData.title}</h2>
@@ -125,19 +138,35 @@ const Checkout = ({ type = 'event' }) => {
                           <div className="p-2 bg-white/5 rounded-lg">
                               <Calendar className="w-4 h-4 text-accentOrange" />
                           </div>
-                          <span>{new Date(slot.startTime).toDateString()}</span>
+                          <span>
+                            {(() => {
+                                const dateStr = slot.date || slot.startTime;
+                                if (!dateStr) return 'Date N/A';
+                                const dateObj = new Date(dateStr);
+                                return isNaN(dateObj.getTime()) ? 'Date N/A' : dateObj.toDateString();
+                            })()}
+                          </span>
                       </div>
                       <div className="flex items-center gap-3 text-sm font-medium text-white/80">
                           <div className="p-2 bg-white/5 rounded-lg">
                               <Clock className="w-4 h-4 text-accentOrange" />
                           </div>
-                          <span>{new Date(slot.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                          <span>
+                            {(() => {
+                                let timeStr = slot.startTime;
+                                if (!timeStr) return '--:--';
+                                if (timeStr.includes('T') || timeStr.includes('Z')) {
+                                    timeStr = new Date(timeStr).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                                }
+                                return timeStr;
+                            })()}
+                          </span>
                       </div>
                       <div className="flex items-center gap-3 text-sm font-medium text-white/80">
                           <div className="p-2 bg-white/5 rounded-lg">
                               <MapPin className="w-4 h-4 text-accentOrange" />
                           </div>
-                          <span>{eventData.location}</span>
+                          <span>{isMovie ? 'VENUE Cinemas, Jaipur' : eventData.location}</span>
                       </div>
                   </div>
                </motion.div>
@@ -176,21 +205,21 @@ const Checkout = ({ type = 'event' }) => {
                    {/* Pricing Breakdown */}
                    <div className="space-y-3 mb-8 bg-black/20 p-6 rounded-2xl border border-white/5">
                        <div className="flex justify-between text-sm">
-                           <span className="text-textMuted">{seatCount} x Tickets (@ ${basePrice})</span>
-                           <span className="text-white font-mono">${subtotal.toFixed(2)}</span>
+                           <span className="text-textMuted">{seatCount} x Tickets (@ ₹{basePrice})</span>
+                           <span className="text-white font-mono">₹{subtotal.toFixed(2)}</span>
                        </div>
                        <div className="flex justify-between text-sm">
                            <span className="text-textMuted">Convenience Fee</span>
-                           <span className="text-white font-mono">${bookingFee.toFixed(2)}</span>
+                           <span className="text-white font-mono">₹{bookingFee.toFixed(2)}</span>
                        </div>
                         <div className="flex justify-between text-sm">
                            <span className="text-textMuted">Taxes & Charges</span>
-                           <span className="text-white font-mono">${tax.toFixed(2)}</span>
+                           <span className="text-white font-mono">₹{tax.toFixed(2)}</span>
                        </div>
                        <div className="h-px bg-white/10 my-2" />
                        <div className="flex justify-between items-center">
                            <span className="text-lg font-bold text-white">Total Payable</span>
-                           <span className="text-2xl font-black text-accentOrange">${totalAmount.toFixed(2)}</span>
+                           <span className="text-2xl font-black text-accentOrange">₹{totalAmount.toFixed(2)}</span>
                        </div>
                    </div>
 

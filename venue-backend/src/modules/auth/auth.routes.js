@@ -1,6 +1,7 @@
 const express = require('express');
-const { registerUser, loginUser } = require('./auth.controller');
+const { registerUser, loginUser, logoutUser, getCurrentUser } = require('./auth.controller');
 const validateRequest = require('../../middlewares/validateRequest');
+const verifyToken = require('../../middlewares/verifyToken');
 const { registerSchema, loginSchema } = require('./auth.validation');
 const { authLimiter } = require('../../middlewares/rateLimiter');
 
@@ -89,5 +90,31 @@ router.post('/register', validateRequest(registerSchema), registerUser);
  *         description: Invalid credentials
  */
 router.post('/login', validateRequest(loginSchema), loginUser);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   get:
+ *     summary: Logout a user
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ */
+router.get('/logout', logoutUser);
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current logged in user
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Current user data
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/me', verifyToken, getCurrentUser);
 
 module.exports = router;

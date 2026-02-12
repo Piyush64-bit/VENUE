@@ -520,4 +520,49 @@ router.route('/movies/:movieId/slots')
     .post(validateRequest(createSlotSchema), organizerController.createSlot)
     .get(organizerController.getSlotsByParent);
 
+/* ======================================================
+   AUTO SLOT GENERATION (DEMO/PORTFOLIO)
+   ====================================================== */
+
+/**
+ * @swagger
+ * /organizer/events/{eventId}/slots/auto-generate:
+ *   post:
+ *     summary: Auto-generate slots for an event (Demo feature)
+ *     tags: [Organizer]
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Slots auto-generated successfully
+ *       400:
+ *         description: All dates already have slots
+ */
+router.post('/events/:eventId/slots/auto-generate', organizerController.autoGenerateSlots);
+
+/**
+ * @swagger
+ * /organizer/movies/{movieId}/slots/auto-generate:
+ *   post:
+ *     summary: Auto-generate slots for a movie (Demo feature)
+ *     tags: [Organizer]
+ *     parameters:
+ *       - in: path
+ *         name: movieId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Slots auto-generated successfully (90 days)
+ *       400:
+ *         description: All dates already have slots
+ */
+router.post('/movies/:movieId/slots/auto-generate', organizerController.autoGenerateSlots);
+
+
 module.exports = router;
