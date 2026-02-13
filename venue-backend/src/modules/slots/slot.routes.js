@@ -20,10 +20,35 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: List of seats with status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           seatNumber:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [AVAILABLE, BOOKED, BLOCKED]
  *       400:
  *         description: Invalid ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Slot not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(
     "/:id/seats",

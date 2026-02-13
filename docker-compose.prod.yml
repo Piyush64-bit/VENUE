@@ -1,0 +1,31 @@
+version: '3.8'
+
+# VENUE Production Overrides
+# This configuration hardens the environment for deployment-ready scenarios.
+
+services:
+  backend:
+    environment:
+      - NODE_ENV=production
+    # Remove development bind mounts; production builds use code embedded in the image
+    volumes:
+      - ./venue-backend/logs:/app/logs
+    # More conservative healthcheck intervals for production stability
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  frontend:
+    # Always restart in production to maintain availability
+    restart: always
+
+  mongo:
+    # Ensure database availability with automatic restarts
+    restart: always
+
+  redis:
+    # Ensure cache layer availability
+    restart: always

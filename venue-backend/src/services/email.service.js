@@ -1,3 +1,4 @@
+const logger = require('../config/logger');
 const nodemailer = require('nodemailer');
 
 // Mock email service for now, but structured to be swapped easily.
@@ -14,9 +15,8 @@ class EmailService {
     }
 
     async sendEmail(to, subject, html) {
-        console.log(`[EmailService] Sending email to ${to}`);
-        console.log(`[EmailService] Subject: ${subject}`);
-        console.log(`[EmailService] Body: ${html.substring(0, 100)}...`);
+        logger.info(`[EmailService] Sending email`, { to, subject });
+        // logger.debug(`[EmailService] Body: ${html.substring(0, 100)}...`);
 
         // Mock success
         return Promise.resolve(true);

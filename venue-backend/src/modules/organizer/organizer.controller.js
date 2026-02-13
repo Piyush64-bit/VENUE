@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const { hashPassword, verifyPassword } = require('../../utils/passwordHasher');
 const Event = require('../events/event.model');
 const Movie = require('../movies/movie.model');
 const Slot = require('../slots/slot.model');
@@ -8,6 +8,7 @@ const User = require('../users/user.model');
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
 const ApiResponse = require('../../utils/ApiResponse');
+const redisService = require('../../services/redis.service');
 
 /* ======================================================
    PROFILE & SETTINGS
@@ -65,13 +66,13 @@ exports.changePassword = catchAsync(async (req, res, next) => {
     }
 
     // Check current password
-    const isPasswordCorrect = await bcrypt.compare(currentPassword, organizer.password);
+    const isPasswordCorrect = await verifyPassword(currentPassword, organizer.password);
     if (!isPasswordCorrect) {
         return next(new AppError('Current password is incorrect', 401));
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Hash new password with Argon2id
+    const hashedPassword = await hashPassword(newPassword);
     organizer.password = hashedPassword;
     await organizer.save();
 
@@ -183,6 +184,7 @@ exports.createEvent = catchAsync(async (req, res, next) => {
     };
 
     const event = await Event.create(eventData);
+    await redisService.clearCache('events:*');
 
     res.status(201).json(new ApiResponse(201, event, 'Event created successfully'));
 });
@@ -225,6 +227,7 @@ exports.updateEvent = catchAsync(async (req, res, next) => {
         return next(new AppError('Event not found or access denied', 404));
     }
 
+    await redisService.clearCache('events:*');
     res.status(200).json(new ApiResponse(200, event, 'Event updated successfully'));
 });
 
@@ -261,6 +264,7 @@ exports.deleteEvent = async (req, res, next) => {
             await Slot.deleteMany({ parentId: event._id, parentType: 'Event' }).session(session);
 
             await session.commitTransaction();
+            await redisService.clearCache('events:*');
             res.status(200).json(new ApiResponse(200, null, 'Event and associated slots deleted successfully'));
         } catch (error) {
             await session.abortTransaction();
@@ -286,6 +290,7 @@ exports.toggleEventPublish = catchAsync(async (req, res, next) => {
         return next(new AppError('Event not found or access denied', 404));
     }
 
+    await redisService.clearCache('events:*');
     res.status(200).json(new ApiResponse(200, event, `Event ${publish ? 'published' : 'unpublished'} successfully`));
 });
 
@@ -301,6 +306,7 @@ exports.createMovie = catchAsync(async (req, res, next) => {
     };
 
     const movie = await Movie.create(movieData);
+    await redisService.clearCache('movies:*');
 
     res.status(201).json(new ApiResponse(201, movie, 'Movie created successfully'));
 });
@@ -343,6 +349,7 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
         return next(new AppError('Movie not found or access denied', 404));
     }
 
+    await redisService.clearCache('movies:*');
     res.status(200).json(new ApiResponse(200, movie, 'Movie updated successfully'));
 });
 
@@ -379,6 +386,7 @@ exports.deleteMovie = catchAsync(async (req, res, next) => {
         await Slot.deleteMany({ parentId: movie._id, parentType: 'Movie' }).session(session);
 
         await session.commitTransaction();
+        await redisService.clearCache('movies:*');
         res.status(200).json(new ApiResponse(200, null, 'Movie and associated slots deleted successfully'));
     } catch (error) {
         await session.abortTransaction();
@@ -401,6 +409,7 @@ exports.toggleMoviePublish = catchAsync(async (req, res, next) => {
         return next(new AppError('Movie not found or access denied', 404));
     }
 
+    await redisService.clearCache('movies:*');
     res.status(200).json(new ApiResponse(200, movie, `Movie ${publish ? 'published' : 'unpublished'} successfully`));
 });
 
@@ -477,6 +486,9 @@ exports.createSlot = catchAsync(async (req, res, next) => {
 
     const slot = await Slot.create(slotData);
 
+    if (parentType === 'Event') await redisService.clearCache('events:*');
+    if (parentType === 'Movie') await redisService.clearCache('movies:*');
+
     res.status(201).json(new ApiResponse(201, slot, 'Slot created successfully'));
 });
 
@@ -544,6 +556,9 @@ exports.deleteSlot = catchAsync(async (req, res, next) => {
 
     await Slot.findByIdAndDelete(req.params.id);
 
+    if (slot.parentType === 'Event') await redisService.clearCache('events:*');
+    else if (slot.parentType === 'Movie') await redisService.clearCache('movies:*');
+
     res.status(200).json(new ApiResponse(200, null, 'Slot deleted successfully'));
 });
 
@@ -576,6 +591,9 @@ exports.updateSlot = catchAsync(async (req, res, next) => {
         req.body,
         { new: true, runValidators: true }
     );
+
+    if (slot.parentType === 'Event') await redisService.clearCache('events:*');
+    else if (slot.parentType === 'Movie') await redisService.clearCache('movies:*');
 
     res.status(200).json(new ApiResponse(200, updatedSlot, 'Slot updated successfully'));
 });
@@ -660,6 +678,9 @@ exports.autoGenerateSlots = catchAsync(async (req, res, next) => {
 
     // Bulk insert all slots
     const createdSlots = await Slot.insertMany(finalSlots);
+
+    if (parentType === 'Event') await redisService.clearCache('events:*');
+    if (parentType === 'Movie') await redisService.clearCache('movies:*');
 
     res.status(201).json(
         new ApiResponse(201, {

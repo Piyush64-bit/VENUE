@@ -1,12 +1,23 @@
+const logger = require('../config/logger');
+
 module.exports = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
-    // Log errors only in development or for non-operational errors
-    if (process.env.NODE_ENV === 'development' || !err.isOperational) {
-        console.error('------- GLOBAL ERROR HANDLER -------');
-        console.error(err);
-        console.error('------------------------------------');
+    const errorLog = {
+        message: err.message,
+        statusCode: err.statusCode,
+        method: req.method,
+        path: req.originalUrl,
+        requestId: req.id,
+        stack: err.stack,
+    };
+
+    // Log all errors via Winston
+    if (err.statusCode >= 500 || !err.isOperational) {
+        logger.error(err.message, errorLog);
+    } else {
+        logger.warn(err.message, errorLog);
     }
 
     if (process.env.NODE_ENV === 'development') {
@@ -15,6 +26,7 @@ module.exports = (err, req, res, next) => {
             error: err,
             message: err.message,
             stack: err.stack,
+            requestId: req.id,
         });
     } else {
         // Production: Handle specific error types
@@ -23,7 +35,8 @@ module.exports = (err, req, res, next) => {
         if (err.name === 'CastError') {
             return res.status(400).json({
                 status: 'fail',
-                message: `Invalid ${err.path}: ${err.value}`
+                message: `Invalid ${err.path}: ${err.value}`,
+                requestId: req.id,
             });
         }
 
@@ -33,7 +46,8 @@ module.exports = (err, req, res, next) => {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Validation failed',
-                errors
+                errors,
+                requestId: req.id,
             });
         }
 
@@ -42,7 +56,8 @@ module.exports = (err, req, res, next) => {
             const field = Object.keys(err.keyValue)[0];
             return res.status(400).json({
                 status: 'fail',
-                message: `${field} already exists`
+                message: `${field} already exists`,
+                requestId: req.id,
             });
         }
 
@@ -50,14 +65,16 @@ module.exports = (err, req, res, next) => {
         if (err.name === 'JsonWebTokenError') {
             return res.status(401).json({
                 status: 'fail',
-                message: 'Invalid token. Please log in again.'
+                message: 'Invalid token. Please log in again.',
+                requestId: req.id,
             });
         }
 
         if (err.name === 'TokenExpiredError') {
             return res.status(401).json({
                 status: 'fail',
-                message: 'Your token has expired. Please log in again.'
+                message: 'Your token has expired. Please log in again.',
+                requestId: req.id,
             });
         }
 
@@ -66,13 +83,14 @@ module.exports = (err, req, res, next) => {
             res.status(err.statusCode).json({
                 status: err.status,
                 message: err.message,
+                requestId: req.id,
             });
         } else {
             // Programming or unknown errors - don't leak details
-            console.error('ERROR 💥', err);
             res.status(500).json({
                 status: 'error',
                 message: 'Something went wrong!',
+                requestId: req.id,
             });
         }
     }

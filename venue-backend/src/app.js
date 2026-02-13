@@ -4,9 +4,11 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
+const morgan = require("morgan");
+const logger = require("./config/logger");
 
 const connectDB = require("./config/db");
-const { apiLimiter, publicLimiter } = require("./middlewares/rateLimiter");
+// Limiters are now imported inside API V1 section to keep scope clear
 
 const authRoutes = require("./modules/auth/auth.routes");
 const eventRoutes = require("./modules/events/event.routes");
@@ -18,6 +20,8 @@ const organizerRoutes = require("./modules/organizer/organizer.routes"); // [NEW
 
 const verifyToken = require("./middlewares/verifyToken");
 const checkRole = require("./middlewares/checkRole");
+const requestIdMiddleware = require("./middlewares/requestId.middleware");
+const sanitizeMiddleware = require("./middlewares/sanitize.middleware");
 const globalErrorHandler = require("./middlewares/globalErrorHandler");
 const AppError = require("./utils/AppError");
 
@@ -31,6 +35,17 @@ const app = express();
 ====================================================== */
 
 app.use(helmet());
+app.use(requestIdMiddleware);
+
+// Configure Morgan to use Winston
+morgan.token('id', (req) => req.id);
+const morganFormat = ':remote-addr - :id [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" - :response-time ms';
+
+app.use(morgan(morganFormat, {
+  stream: {
+    write: (message) => logger.http(message.trim()),
+  },
+}));
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
@@ -59,6 +74,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(sanitizeMiddleware());
 
 app.use(
   mongoSanitize({
@@ -70,7 +86,9 @@ app.use(
    DATABASE
 ====================================================== */
 
-connectDB();
+if (process.env.NODE_ENV !== "test") {
+  connectDB();
+}
 
 /* ======================================================
    HEALTH CHECK
@@ -90,11 +108,48 @@ app.get("/health", (req, res) => {
 
 const apiV1 = express.Router();
 
-apiV1.use("/auth", apiLimiter, authRoutes);
-apiV1.use("/events", publicLimiter, eventRoutes);
-apiV1.use("/movies", publicLimiter, movieRoutes);
-apiV1.use("/bookings", apiLimiter, bookingRoutes);
-apiV1.use("/slots", publicLimiter, slotRoutes);
+const {
+  globalLimiter,
+  authLimiter,
+  publicReadLimiter,
+  writeLimiter,
+  userLimiter,
+  bookingLimiter
+} = require("./middlewares/rateLimiter");
+
+// 1. Auth Routes (Tier 2: Brute Force Protection)
+apiV1.use("/auth", authLimiter, authRoutes);
+
+// 2. Public Data Routes (Tier 3: Scrape Protection + Tier 5: Write Throttle)
+// GET requests get 3000/hr, Write requests get 100/hr (if authenticated handled by controller/middleware later)
+// Note: writeLimiter requires req.user for strict user-limiting, but falls back to IP if not present.
+// Since these routes might be mixed (public GET, protected POST), we apply both.
+apiV1.use("/events", publicReadLimiter, writeLimiter, eventRoutes);
+apiV1.use("/movies", publicReadLimiter, writeLimiter, movieRoutes);
+apiV1.use("/slots", publicReadLimiter, writeLimiter, slotRoutes);
+
+// 3. User & Booking Routes (Authenticated) - Tier 4 & 6
+// Must verify token first to enable ID-based limiting
+// We also apply globalLimiter (IP-based) first to protect against unauthenticated token flooding/brute-force
+apiV1.use("/bookings", globalLimiter, verifyToken, userLimiter, bookingLimiter, bookingRoutes);
+apiV1.use("/users", globalLimiter, verifyToken, userLimiter, writeLimiter, userRoutes);
+apiV1.use("/organizer", globalLimiter, verifyToken, userLimiter, writeLimiter, organizerRoutes);
+
+/* ======================================================
+   TEST PROTECTED ROUTE
+====================================================== */
+
+apiV1.get(
+  "/protected",
+  verifyToken,
+  checkRole(["USER", "ADMIN", "ORGANIZER"]),
+  (req, res) => {
+    res.status(200).json({
+      message: "Protected route accessed successfully",
+      user: req.user
+    });
+  }
+);
 
 // Serve uploaded files with proper CORS headers
 app.use('/uploads', (req, res, next) => {
@@ -110,9 +165,6 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static('uploads'));
 
-apiV1.use("/organizer", organizerRoutes);
-apiV1.use("/users", apiLimiter, userRoutes);
-
 app.use("/api/v1", apiV1);
 
 /* ======================================================
@@ -120,22 +172,6 @@ app.use("/api/v1", apiV1);
 ====================================================== */
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-/* ======================================================
-   TEST PROTECTED ROUTE
-====================================================== */
-
-app.get(
-  "/protected",
-  verifyToken,
-  checkRole(["USER", "ADMIN", "ORGANIZER"]),
-  (req, res) => {
-    res.status(200).json({
-      message: "Protected route accessed successfully",
-      user: req.user
-    });
-  }
-);
 
 /* ======================================================
    ROOT ROUTE
@@ -160,3 +196,4 @@ app.all("*", (req, res, next) => {
 app.use(globalErrorHandler);
 
 module.exports = app;
+

@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const { hashPassword, verifyPassword } = require('../../utils/passwordHasher');
 const jwt = require('jsonwebtoken');
 const User = require('../users/user.model');
 const AppError = require('../../utils/AppError');
@@ -11,7 +11,7 @@ const register = async (userData) => {
         throw new AppError('User already exists', 400);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password);
 
     const user = await User.create({
         name,
@@ -39,7 +39,14 @@ const login = async (email, password) => {
     }
 
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+        throw new AppError('Invalid email or password', 401);
+    }
+
+    // Verify password with Argon2id
+    const isPasswordValid = await verifyPassword(password, user.password);
+    
+    if (!isPasswordValid) {
         throw new AppError('Invalid email or password', 401);
     }
 

@@ -1,16 +1,13 @@
+const logger = require('../../config/logger');
 const mongoose = require('mongoose');
 const catchAsync = require('../../utils/catchAsync');
-const AppError = require('../../utils/AppError');
 const Booking = require('./booking.model');
 const Slot = require('../slots/slot.model');
 const Waitlist = require('../waitlist/waitlist.model');
 const Event = require('../events/event.model');
-const User = require('../users/user.model');
+const AppError = require('../../utils/AppError');
 const ApiResponse = require('../../utils/ApiResponse');
 
-/**
- * BOOK SLOT (Quantity-based)
- */
 /**
  * BOOK SLOT (Quantity-based)
  */
@@ -22,7 +19,7 @@ const bookSlot = catchAsync(async (req, res, next) => {
     const { slotId, quantity = 1, seats } = req.body;
     const userId = req.user._id;
 
-    console.log("Create Booking Payload:", { slotId, quantity, seats, userId });
+    logger.info("Create Booking Payload", { slotId, quantity, userId, requestId: req.id });
 
     if (quantity < 1) {
       throw new AppError("Quantity must be at least 1", 400);
@@ -136,7 +133,7 @@ const bookSlot = catchAsync(async (req, res, next) => {
     // TODO: Implement email service
     // const user = await User.findById(userId);
     // emailService.sendBookingConfirmation(user, booking[0], slot, parent).catch(err => {
-    //   console.error("Failed to send email", err);
+    //   logger.error("Failed to send email", { error: err.message, requestId: req.id });
     // });
 
     // Populate the booking before sending response

@@ -1,33 +1,10 @@
-# VENUE Architecture Documentation
+# VENUE: System Architecture
 
-## 1. Project Overview
+## Core Design Patterns
 
-VENUE is a high-performance, full-stack event and movie booking platform designed to handle concurrent user interactions, real-time updates, and complex scheduling logic. It features a strict separation of concerns between the client (React) and server (Express) applications, ensuring scalability and maintainability.
+VENUE follows a **Modular Monolith** pattern with **Domain-Driven Design (DDD)** influences, optimized for high-concurrency booking operations and real-time state synchronization. The architecture enforces clear separation of concerns while maintaining the operational simplicity of a unified codebase.
 
-## 2. Technology Stack
-
-### Backend (`venue-backend`)
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: MongoDB (with Mongoose ODM) for persistent storage
-- **Caching & Queues**: Redis (via `ioredis`) for rate limiting and potential caching
-- **Real-time**: Socket.IO for live updates (seat availability, notifications)
-- **Authentication**: JWT (JSON Web Tokens) with HTTP-only cookies
-- **Validation**: Zod for request schema validation
-- **Logging**: Winston for structured logging
-- **Security**: Helmet, XSS-Clean, Express-Mongo-Sanitize, CORS
-
-### Frontend (`venue-frontend`)
-- **Framework**: React 19 (via Vite)
-- **State Management**: React Query (TanStack Query) for server state, React Context for auth
-- **Routing**: React Router v7
-- **Styling**: TailwindCSS, clsx, tailwind-merge
-- **UI Components**: Radix UI primitives (implied), Lucide React icons
-- **Animations**: Framer Motion
-- **Forms**: React Hook Form with Zod resolvers
-- **HTTP Client**: Axios with interceptors for token refresh
-
-## 3. User Booking Workflow
+## 1. User Booking Workflow
 
 The booking process is the core user journey, involving complex state management and concurrency checks.
 
@@ -59,7 +36,7 @@ sequenceDiagram
     S-->>U: Update Seat Map (Real-time)
 ```
 
-## 4. Organizer Event Creation Workflow
+## 2. Organizer Event Creation Workflow
 
 Organizers follow a structured flow to create events and generate time slots automatically.
 
@@ -68,22 +45,22 @@ flowchart TD
     start[Start: Organizer Dashboard] --> check{Event Type?}
     check -->|Movie| select_movie[Select Movie from Tech Specs]
     check -->|Concert/Play| create_details[Enter Event Details]
-    
+
     select_movie --> set_schedule[Set Schedule & Venue]
     create_details --> set_schedule
-    
+
     set_schedule --> upload_assets[Upload Banner/Images]
     upload_assets --> validate[Validate Inputs]
-    
+
     validate -->|Invalid| error[Show Error] --> set_schedule
     validate -->|Valid| submit[Submit to API]
-    
+
     submit --> db_save[Save Event to MongoDB]
     db_save --> generate_slots[Auto-Generate Time Slots]
     generate_slots --> success[Emulate Success & Redirect]
 ```
 
-## 5. System Architecture Diagram
+## 3. System Architecture Diagram
 
 ```mermaid
 graph TD
@@ -102,66 +79,134 @@ graph TD
     Socket -->|Pub/Sub| Redis
 ```
 
-## 6. Directory Structure
+## 4. Module Organization
 
-### Backend
+### Backend Module Architecture
+
+The backend follows a **Controller-Service-Model (CSM)** pattern with middleware-based cross-cutting concerns:
+
 ```
-venue-backend/src/
-├── config/             # Database and environment configuration
-├── middlewares/        # Express middlewares (Auth, Validation, Error Handling)
-├── modules/            # Feature-based modules (Controller-Service-Model pattern)
-│   ├── auth/           # Authentication & Registration
-│   ├── bookings/       # Booking logic, concurrency handling
-│   ├── events/         # Event management (CRUD)
-│   ├── movies/         # Movie management
-│   ├── organizer/      # Organizer-specific features
-│   ├── slots/          # Time slot generation and management
-│   └── users/          # User profile management
-├── scripts/            # Database seeding and maintenance scripts
-├── services/           # Shared business logic and external services
-└── utils/              # Helper functions (Response handlers, etc.)
+src/
+├── modules/                    # Domain-driven feature modules
+│   ├── auth/                  # Authentication & credential management
+│   │   ├── auth.controller.js # Request handlers
+│   │   ├── auth.service.js    # Business logic
+│   │   ├── auth.routes.js     # Route definitions
+│   │   └── auth.validation.js # Input schemas (Zod)
+│   ├── bookings/              # Booking transactions & concurrency
+│   │   ├── booking.controller.js
+│   │   ├── booking.model.js   # MongoDB schema
+│   │   └── booking.routes.js
+│   ├── events/                # Event lifecycle management
+│   │   ├── event.controller.js
+│   │   ├── event.model.js
+│   │   ├── event.service.js
+│   │   └── event.routes.js
+│   ├── organizer/             # Organizer-specific operations
+│   ├── slots/                 # Time slot generation
+│   ├── users/                 # User profile management
+│   └── waitlist/              # Queue management
+│
+├── middlewares/               # Cross-cutting middleware
+│   ├── verifyToken.js        # JWT authentication
+│   ├── checkRole.js          # Role-based authorization
+│   ├── rateLimiter.js        # Redis-backed rate limiting
+│   ├── validateRequest.js    # Zod schema validation
+│   ├── globalErrorHandler.js # Centralized error handling
+│   ├── requestId.middleware.js # Request correlation tracking
+│   └── cache.middleware.js   # Response caching
+│
+├── config/                    # External service initialization
+│   ├── db.js                 # MongoDB connection
+│   ├── cloudinary.js         # Media storage service
+│   ├── logger.js             # Structured logging
+│   └── swagger.js            # OpenAPI documentation
+│
+├── services/                  # Shared business logic
+│   ├── email.service.js      # Email delivery abstraction
+│   └── redis.service.js      # Cache & pub/sub client
+│
+└── utils/                     # Helper utilities
+    ├── APIFeatures.js        # Query pagination/filtering
+    ├── AppError.js           # Standardized error class
+    └── generateSlots.js      # Algorithmic slot generation
 ```
 
-### Frontend
+### Frontend Component Architecture
+
 ```
-venue-frontend/src/
-├── api/                # Axios instances and API service functions
-├── components/         # Reusable UI components
-│   ├── layout/         # Layout wrappers (Navbar, ProtectedRoute)
-│   ├── ui/             # Generic UI elements (Buttons, Inputs, Modals)
-│   └── visuals/        # Pure display components
-├── context/            # React Context providers (AuthContext)
-├── pages/              # Route-level page components
-│   ├── organizer/      # Organizer portal pages
-│   └── ...             # User-facing pages (Home, Events, Booking)
-├── routes/             # App routing configuration
-└── socket/             # Socket.IO client initialization
+src/
+├── pages/                     # Route-level page components
+│   └── organizer/            # Organizer portal pages
+│
+├── components/               # Reusable UI components
+│   ├── layout/              # Layout abstractions (Navbar, etc.)
+│   ├── organizer/           # Organizer-specific components
+│   └── ui/                  # Generic component library
+│
+├── api/                     # API service layer (Axios)
+│   ├── axios.js            # Interceptor & base config
+│   ├── user.js             # User endpoints
+│   ├── movies.js           # Movie endpoints
+│   └── organizer.js        # Organizer endpoints
+│
+├── context/                # Application state machine
+│   └── AuthContext.jsx     # Authentication state provider
+│
+├── routes/                 # Routing configuration
+│   └── AppRoutes.jsx       # Route definitions
+│
+├── socket/                 # Real-time communication
+│   └── socket.js          # Socket.IO client initialization
+│
+└── lib/                   # Shared utilities
+    ├── utils.js           # Helper functions
+    └── validation.js      # Zod validation schemas
 ```
 
-## 7. Core Modules & Data Flow
+## 5. Security Architecture & Traffic Management
 
-### Authentication
-- Uses **JWT** strategies.
-- **Access Token**: Short-lived, sent in HTTP-Only cookies.
-- **Refresh Token**: Longer-lived, used to effortlessly rotate access tokens.
-- **RBAC**: Middleware checks `user.role` (user, organizer, admin) to protect routes.
+### Distributed Rate Limiting (6-Tier Strategy)
 
-### Booking System
-The booking system is the critical path of the application, designed for consistency.
-1.  **Selection**: User selects seats/slots.
-2.  **Hold**: (Optional) Temporary hold on seats via Redis/DB to prevent double booking during checkout.
-3.  **Transaction**: MongoDB Transactions (`session.withTransaction`) ensure atomicity.
-    - Check availability.
-    - Deduct capacity/Mark seats as booked.
-    - Create booking record.
-4.  **Confirmation**: Success response sent to client; Socket.IO broadcasts capacity update to other users.
+The system employs a multi-layered defense strategy implemented via Redis-backed middleware:
 
-### Slot Generation
-- Automatic generation of time slots based on event duration and operating hours.
-- Handles logic to prevent overlapping slots for the same venue/resource.
+1.  **Global API Shield**: High-level protection against massive DDoS attempts.
+2.  **Auth Brute-Force Protection**: 15-minute lockout strategy for failed login attempts.
+3.  **Scraping Prevention**: Dynamic throttling for public READ operations.
+4.  **Authenticated User Limits**: Tiered quotas for active user sessions.
+5.  **Write Operation Throttle**: Mutation-specific limits to prevent state exhaustion.
+6.  **Booking Burst Guard**: Specific 60-second window limits for the critical booking path.
 
-## 8. Key Design Decisions
+### Identity & Access Management
 
-1.  **Optimistic vs. Pessimistic Locking**: The system currently employs pessimistic validation within transactions—checking availability *during* the write to ensure no overbooking occurs, utilizing MongoDB's atomic document updates.
-2.  **Modular Monolith**: Code is organized by feature (Modules) rather than technical layer (Controllers/Models folders). This makes scaling the team easier as developers can own specific domains.
-3.  **Client-Side Caching**: React Query is heavily used to cache API responses, reducing server load and making the UI feel instant. Stale-while-revalidate strategies keep data fresh.
+- **Persistence**: Stateless JWTs stored in secure, `HttpOnly` and `SameSite: Strict` cookies.
+- **Verification**: Middleware-based verification that refreshes user state from the primary DB to ensure immediate revocation of access upon account changes.
+- **RBAC**: Recursive role checking for complex organizer/admin permissions.
+
+## 6. Concurrency & Data Integrity
+
+### Atomic Booking Engine
+
+To prevent overbooking and "lost updates" in high-demand scenarios:
+
+1.  **Transactional Integrity**: Uses MongoDB's `session.withTransaction` for ACID compliance during seat/slot deduction.
+2.  **Pessimistic Validation**: Every booking attempt re-validates the _current_ state of truth in the database within the lock of a transaction before committing the reservation.
+3.  **Eventual Consistency (State Sync)**: Successful transactions trigger asynchronous broadcasts via Socket.IO to update all connected clients, minimizing stale-state conflicts.
+
+## 7. Request Flow & Observability
+
+### Structured Request Correlation
+
+All operations are tracked end-to-end using unique request IDs:
+
+- A `requestId` is generated/extracted from headers at the entry point
+- This ID is injected into every database query, cache operation, and log entry
+- Enables full-stack distributed tracing across async operations
+
+### Logging Architecture
+
+The system uses Winston for structured JSON logging with environment-aware output:
+
+- **Local Development**: Color-coded pretty-print for rapid debugging
+- **Production**: Newline-delimited JSON format for ingestion into log aggregation systems (ELK, CloudWatch)
+- All logs include: timestamp, request ID, service layer, operation type, and context data
