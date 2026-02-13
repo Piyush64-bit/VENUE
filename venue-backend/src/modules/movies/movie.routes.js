@@ -4,6 +4,7 @@ const verifyToken = require('../../middlewares/verifyToken');
 const checkRole = require('../../middlewares/checkRole');
 
 const router = express.Router();
+const cacheMiddleware = require('../../middlewares/cache.middleware');
 
 // Get all movies (Public)
 /**
@@ -23,8 +24,13 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: List of movies
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Array_Movie'
  */
-router.get('/', getMovies);
+// Cache for 60 seconds
+router.get('/', cacheMiddleware(60), getMovies);
 
 // Create a new movie (Admin/Organizer only)
 /**
@@ -64,8 +70,28 @@ router.get('/', getMovies);
  *     responses:
  *       201:
  *         description: Movie created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Movie'
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
  *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createMovie);
 
@@ -85,10 +111,19 @@ router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createMovie);
  *     responses:
  *       200:
  *         description: Movie details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Movie'
  *       404:
  *         description: Movie not found or not published
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', getMovieById);
+// Cache for 60 seconds
+router.get('/:id', cacheMiddleware(60), getMovieById);
 
 // Get movie slots
 /**
@@ -106,8 +141,16 @@ router.get('/:id', getMovieById);
  *     responses:
  *       200:
  *         description: List of active slots with available seats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Array_Slot'
  *       404:
  *         description: Movie not found or not published
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:id/slots', getMovieSlots);
 

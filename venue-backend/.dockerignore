@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.env
+.env.example
+*.md
+logs
+coverage
+.vscode
+.idea

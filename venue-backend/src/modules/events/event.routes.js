@@ -4,6 +4,7 @@ const verifyToken = require('../../middlewares/verifyToken');
 const checkRole = require('../../middlewares/checkRole');
 
 const router = express.Router();
+const cacheMiddleware = require('../../middlewares/cache.middleware');
 
 // Get all events
 /**
@@ -23,8 +24,13 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: List of events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Array_Event'
  */
-router.get('/', getEvents);
+// Cache for 60 seconds
+router.get('/', cacheMiddleware(60), getEvents);
 
 // Get organizer's own events
 /**
@@ -38,8 +44,22 @@ router.get('/', getEvents);
  *     responses:
  *       200:
  *         description: List of organizer's events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Array_Event'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Forbidden
+ *         description: Forbidden - Not an organizer
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/organizer', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), getOrganizerEvents);
 
@@ -83,8 +103,28 @@ router.get('/organizer', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), getOrga
  *     responses:
  *       201:
  *         description: Event created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Event'
+ *       400:
+ *         description: Validation Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
  *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createEvent);
 
@@ -109,10 +149,19 @@ const validateId = require('../../middlewares/validateId');
  *     responses:
  *       200:
  *         description: Event details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Event'
  *       404:
  *         description: Event not found or not published
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', validateId('id'), getEventById);
+// Cache for 60 seconds
+router.get('/:id', validateId('id'), cacheMiddleware(60), getEventById);
 
 // Get slots for an event
 /**
@@ -131,10 +180,19 @@ router.get('/:id', validateId('id'), getEventById);
  *     responses:
  *       200:
  *         description: List of active slots with available seats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse_Array_Slot'
  *       404:
  *         description: Event not found or not published
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:id/slots', validateId('id'), getEventSlots);
 
 module.exports = router;
+
 

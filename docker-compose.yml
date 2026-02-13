@@ -1,52 +1,90 @@
 version: '3.8'
 
+# VENUE Full-Stack Docker Orchestration
+# This configuration defines the local development environment for the VENUE application.
+
 services:
+  # Node.js Express Backend Service
   backend:
-    build: ./venue-backend
+    build:
+      context: ./venue-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "5000:5000"
+    env_file:
+      - ./venue-backend/.env
     environment:
-      - PORT=5000
+      - NODE_ENV=development
       - MONGO_URI=mongodb://mongo:27017/venue
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=supersecretkey_change_me_in_prod
-      - FRONTEND_URL=http://localhost:80
-      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Ensures the service is actually ready to receive traffic
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - ./venue-backend/logs:/app/logs
+      # Bind mounting the source code enables hot-reloading in the development container
+      - ./venue-backend/src:/app/src
     networks:
       - venue-network
 
+  # React Frontend Service (Served via Nginx)
   frontend:
-    build: ./venue-frontend
+    build:
+      context: ./venue-frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api/v1
     depends_on:
       - backend
     networks:
       - venue-network
 
+  # MongoDB Persistence Layer
   mongo:
-    image: mongo:6
-    ports:
-      - "27017:27017" # Exposed for local debugging, can remove in prod
+    image: mongo:7
+    container_name: venue-mongo
+    restart: unless-stopped
     volumes:
-      - mongo_data:/data/db
+      - mongo-data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - venue-network
 
+  # Redis In-Memory Store for Caching/Rate-Limiting
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379" # Exposed for local debugging
+    container_name: venue-redis
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - venue-network
 
 networks:
+  # Isolated network for secure inter-service communication
   venue-network:
     driver: bridge
 
 volumes:
-  mongo_data:
+  # Named volume for persistent database storage
+  mongo-data:

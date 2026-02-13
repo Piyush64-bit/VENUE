@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('./logger');
 
 const connectDB = async (retries = 5) => {
   try {
@@ -6,27 +7,27 @@ const connectDB = async (retries = 5) => {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
     });
-    console.log('MongoDB connected successfully');
+    logger.info('MongoDB connected successfully');
 
     // Connection event listeners
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Attempting reconnect...');
+      logger.warn('MongoDB disconnected. Attempting reconnect...');
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
+      logger.error('MongoDB connection error', { error: err });
     });
 
   } catch (error) {
-    console.error('MongoDB connection error:', error.message);
+    logger.error('MongoDB connection error', { error: error.message });
 
     if (retries > 0) {
-      console.log(`Retrying connection... (${retries} attempts left)`);
+      logger.info(`Retrying connection... (${retries} attempts left)`);
       await new Promise(res => setTimeout(res, 5000));
       return connectDB(retries - 1);
     }
 
-    console.error('Failed to connect to MongoDB after multiple attempts');
+    logger.error('Failed to connect to MongoDB after multiple attempts');
     process.exit(1);
   }
 };

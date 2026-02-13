@@ -1,9 +1,11 @@
 const eventService = require('./event.service');
 const catchAsync = require('../../utils/catchAsync');
 const ApiResponse = require('../../utils/ApiResponse');
+const redisService = require('../../services/redis.service');
 
 const createEvent = catchAsync(async (req, res, next) => {
   const { event, slots } = await eventService.createEvent(req.body, req.user.userId);
+  await redisService.clearCache('events:*');
 
   return res.status(201).json(
     new ApiResponse(201, { event, slots }, "Event and slots created successfully")

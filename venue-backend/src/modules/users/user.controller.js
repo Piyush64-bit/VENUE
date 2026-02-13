@@ -4,7 +4,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiResponse = require('../../utils/ApiResponse');
 const Event = require('../events/event.model');
 const Movie = require('../movies/movie.model');
-const bcrypt = require('bcrypt');
+const { hashPassword, verifyPassword } = require('../../utils/passwordHasher');
 
 // Toggle Favorite (Add/Remove)
 exports.toggleFavorite = catchAsync(async (req, res, next) => {
@@ -162,13 +162,13 @@ exports.changePassword = catchAsync(async (req, res, next) => {
     }
 
     // Verify current password
-    const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+    const isPasswordCorrect = await verifyPassword(currentPassword, user.password);
     if (!isPasswordCorrect) {
         return next(new AppError('Current password is incorrect', 401));
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Hash new password with Argon2id
+    const hashedPassword = await hashPassword(newPassword);
     user.password = hashedPassword;
     await user.save();
 

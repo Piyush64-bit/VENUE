@@ -4,6 +4,7 @@ const generateSlots = require("../../utils/generateSlots");
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/AppError');
 const ApiResponse = require('../../utils/ApiResponse');
+const redisService = require('../../services/redis.service');
 
 const createMovie = catchAsync(async (req, res, next) => {
     const session = await Movie.startSession();
@@ -61,6 +62,7 @@ const createMovie = catchAsync(async (req, res, next) => {
         }
 
         await session.commitTransaction();
+        await redisService.clearCache('movies:*');
 
         return res.status(201).json(
             new ApiResponse(201, { movie: movie[0], slots: createdSlots }, "Movie created and slots generated successfully")
