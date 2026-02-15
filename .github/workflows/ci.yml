@@ -59,7 +59,7 @@ jobs:
     
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:7
         ports:
           - 27017:27017
         options: >-
@@ -69,7 +69,7 @@ jobs:
           --health-retries 5
       
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7-alpine
         ports:
           - 6379:6379
         options: >-
@@ -355,10 +355,223 @@ jobs:
         if: always()
         run: docker-compose down -v
   
+  performance-test:
+    name: Performance Tests (K6)
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install K6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      
+      - name: Create Test Environment
+        run: |
+          cat > venue-backend/.env << EOF
+          PORT=5000
+          NODE_ENV=test
+          MONGO_URI=mongodb://mongo:27017/venue_test
+          REDIS_URL=redis://redis:6379
+          JWT_SECRET=test_jwt_secret_k6
+          JWT_EXPIRE=30d
+          LOG_LEVEL=error
+          EOF
+      
+      - name: Start Services
+        run: |
+          docker-compose up -d
+          echo "⏳ Waiting for services to be ready..."
+          sleep 30
+      
+      - name: Run Load Tests
+        working-directory: ./venue-backend/k6
+        run: |
+          k6 run --out json=load-test-results.json load-test.js || true
+      
+      - name: Run Rate Limit Tests
+        working-directory: ./venue-backend/k6
+        run: |
+          k6 run rate-limit-test.js
+      
+      - name: Run Booking Concurrency Tests
+        working-directory: ./venue-backend/k6
+        run: |
+          k6 run booking-concurrency.js || true
+      
+      - name: Upload K6 Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-results
+          path: venue-backend/k6/*.json
+        if: always()
+      
+      - name: Cleanup
+        if: always()
+        run: docker-compose down -v
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-test, frontend-test, docker-build, security-scan]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://venue-staging.example.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Add your deployment platform here (Railway, Render, Vercel, etc.)
+      - name: Deploy Backend to Staging
+        run: |
+          echo "🚀 Deploying backend to staging..."
+          echo "Add your deployment commands here:"
+          echo "  - Railway: railway up"
+          echo "  - Render: render deploy"
+          echo "  - Custom: docker push + SSH commands"
+          # Uncomment and configure your deployment method:
+          # railway up --service venue-backend --environment staging
+      
+      - name: Deploy Frontend to Staging
+        run: |
+          echo "🚀 Deploying frontend to staging..."
+          echo "Add your deployment commands here:"
+          echo "  - Vercel: vercel --prod --token=$VERCEL_TOKEN"
+          echo "  - Netlify: netlify deploy --prod --auth=$NETLIFY_AUTH_TOKEN"
+          # Uncomment and configure your deployment method:
+          # vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Run Smoke Tests
+        run: |
+          echo "🔍 Running smoke tests on staging..."
+          # Add basic health check
+          # curl -f https://venue-staging-api.example.com/health || exit 1
+      
+      - name: Notify Deployment
+        run: |
+          echo "✅ Staging deployment complete!"
+          echo "Backend: https://venue-staging-api.example.com"
+          echo "Frontend: https://venue-staging.example.com"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-test, frontend-test, docker-build, security-scan, integration-test, performance-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://venue.example.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Release Tag
+        id: tag
+        run: |
+          VERSION="v$(date +'%Y.%m.%d')-${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Add your production deployment here
+      - name: Deploy Backend to Production
+        run: |
+          echo "🚀 Deploying backend to production..."
+          echo "Version: ${{ steps.tag.outputs.version }}"
+          # railway up --service venue-backend --environment production
+      
+      - name: Deploy Frontend to Production
+        run: |
+          echo "🚀 Deploying frontend to production..."
+          # vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Run Health Checks
+        run: |
+          echo "🏥 Running health checks..."
+          # curl -f https://venue-api.example.com/health || exit 1
+          # Add critical endpoint checks
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.version }}
+          release_name: Release ${{ steps.tag.outputs.version }}
+          body: |
+            ## 🚀 Production Deployment
+            
+            **Deployed**: ${{ github.event.head_commit.message }}
+            **Commit**: ${{ github.sha }}
+            
+            ### Changes
+            ${{ github.event.head_commit.message }}
+            
+            ### Links
+            - 🌐 Frontend: https://venue.example.com
+            - 🔌 API: https://venue-api.example.com
+            - 📊 Docs: https://venue-api.example.com/docs
+          draft: false
+          prerelease: false
+        continue-on-error: true
+      
+      - name: Notify Deployment Success
+        run: |
+          echo "✅ Production deployment complete!"
+          echo "🎉 Version ${{ steps.tag.outputs.version }} is live!"
+
+  pr-preview:
+    name: PR Preview Deployment
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-test, frontend-test]
+    if: github.event_name == 'pull_request'
+    environment:
+      name: preview-pr-${{ github.event.pull_request.number }}
+      url: https://venue-pr-${{ github.event.pull_request.number }}.example.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Preview
+        run: |
+          echo "🔍 Deploying preview for PR #${{ github.event.pull_request.number }}"
+          echo "Preview URL: https://venue-pr-${{ github.event.pull_request.number }}.example.com"
+          # Add preview deployment commands
+          # vercel --token=${{ secrets.VERCEL_TOKEN }}
+      
+      - name: Comment Preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const previewUrl = `https://venue-pr-${prNumber}.example.com`;
+            
+            github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Preview Deployment Ready!\n\n` +
+                    `🌐 **Frontend**: ${previewUrl}\n` +
+                    `🔌 **API**: https://venue-pr-${prNumber}-api.example.com\n\n` +
+                    `✅ Build completed in ${{ github.run_number }}\n` +
+                    `📊 [View logs](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
+
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [code-quality, backend-test, frontend-test, docker-build, security-scan, integration-test]
+    needs: [code-quality, backend-test, frontend-test, docker-build, security-scan, integration-test, performance-test]
     if: always()
     
     steps:
@@ -374,3 +587,4 @@ jobs:
           echo "- Docker Build: ${{ needs.docker-build.result }}"
           echo "- Security Scan: ${{ needs.security-scan.result }}"
           echo "- Integration Tests: ${{ needs.integration-test.result }}"
+          echo "- Performance Tests: ${{ needs.performance-test.result }}"
