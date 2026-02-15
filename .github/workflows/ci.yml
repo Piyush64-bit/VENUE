@@ -36,7 +36,12 @@ jobs:
       
       - name: Backend Linting
         working-directory: ./venue-backend
-        run: npm run lint || echo "⚠️ ESLint not configured for backend, skipping..."
+        run: |
+          if npm run | grep -q "lint"; then
+            npm run lint
+          else
+            echo "⚠️ lint script not found in backend, skipping..."
+          fi
         continue-on-error: true
       
       - name: Frontend Linting
@@ -90,6 +95,19 @@ jobs:
       - name: Install Backend Dependencies
         working-directory: ./venue-backend
         run: npm ci
+      
+      - name: Create Test Environment File
+        working-directory: ./venue-backend
+        run: |
+          cat > .env.test << EOF
+          NODE_ENV=test
+          PORT=5000
+          MONGO_URI=mongodb://localhost:27017/venue_test
+          REDIS_URL=redis://localhost:6379
+          JWT_SECRET=test_secret_key_for_ci
+          JWT_EXPIRE=30d
+          LOG_LEVEL=error
+          EOF
       
       - name: Run Unit Tests
         working-directory: ./venue-backend
