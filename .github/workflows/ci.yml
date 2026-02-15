@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
       
       - name: Install Backend Dependencies
         working-directory: ./venue-backend
@@ -156,7 +155,7 @@ jobs:
       
       - name: Run Frontend Tests
         working-directory: ./venue-frontend
-        run: npm run test -- --coverage
+        run: npm run test -- --run --coverage
       
       - name: Upload Frontend Coverage
         uses: codecov/codecov-action@v4
@@ -264,18 +263,26 @@ jobs:
         with:
           node-version: '20'
       
+      - name: Install Backend Dependencies
+        working-directory: ./venue-backend
+        run: npm ci
+      
       - name: Audit Backend Dependencies
         working-directory: ./venue-backend
         run: |
           npm audit --audit-level=moderate || echo "⚠️ Backend has moderate+ vulnerabilities"
-          npm audit --json > ../backend-audit.json
+          npm audit --json > ../backend-audit.json || true
         continue-on-error: true
+      
+      - name: Install Frontend Dependencies
+        working-directory: ./venue-frontend
+        run: npm ci
       
       - name: Audit Frontend Dependencies
         working-directory: ./venue-frontend
         run: |
           npm audit --audit-level=moderate || echo "⚠️ Frontend has moderate+ vulnerabilities"
-          npm audit --json > ../frontend-audit.json
+          npm audit --json > ../frontend-audit.json || true
         continue-on-error: true
       
       - name: Upload Audit Results
