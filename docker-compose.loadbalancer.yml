@@ -1,0 +1,145 @@
+version: '3.8'
+
+# VENUE Load Balancer Testing Environment
+# This configuration sets up multiple backend instances with nginx as a load balancer
+
+services:
+  # Nginx Load Balancer
+  load-balancer:
+    image: nginx:alpine
+    container_name: venue-load-balancer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx-lb.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
+      - backend-3
+    networks:
+      - venue-lb-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Backend Instance 1
+  backend-1:
+    build:
+      context: ./venue-backend
+      dockerfile: Dockerfile
+    container_name: venue-backend-1
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongo:27017/venue
+      - REDIS_URL=redis://redis:6379
+      - DISABLE_RATE_LIMIT=true
+      - INSTANCE_ID=backend-1
+      - PORT=5000
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - venue-lb-network
+
+  # Backend Instance 2
+  backend-2:
+    build:
+      context: ./venue-backend
+      dockerfile: Dockerfile
+    container_name: venue-backend-2
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongo:27017/venue
+      - REDIS_URL=redis://redis:6379
+      - DISABLE_RATE_LIMIT=true
+      - INSTANCE_ID=backend-2
+      - PORT=5000
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - venue-lb-network
+
+  # Backend Instance 3
+  backend-3:
+    build:
+      context: ./venue-backend
+      dockerfile: Dockerfile
+    container_name: venue-backend-3
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongo:27017/venue
+      - REDIS_URL=redis://redis:6379
+      - DISABLE_RATE_LIMIT=true
+      - INSTANCE_ID=backend-3
+      - PORT=5000
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - venue-lb-network
+
+  # MongoDB Database (Shared)
+  mongo:
+    image: mongo:7
+    container_name: venue-mongo-lb
+    restart: unless-stopped
+    volumes:
+      - mongo-lb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - venue-lb-network
+
+  # Redis Cache (Shared)
+  redis:
+    image: redis:7-alpine
+    container_name: venue-redis-lb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - venue-lb-network
+
+networks:
+  venue-lb-network:
+    driver: bridge
+
+volumes:
+  mongo-lb-data:

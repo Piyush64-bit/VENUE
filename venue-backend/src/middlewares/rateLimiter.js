@@ -6,6 +6,11 @@ const AppError = require('../utils/AppError');
 const redisClient = redisService.getClient();
 
 const createLimiter = (options) => {
+    // Skip rate limiting in test and load test environments
+    if (process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true') {
+        return (req, res, next) => next();
+    }
+
     // 1. Extract custom options that shouldn't be passed to rateLimit
     const { prefix, useUserId, ...rateLimitOptions } = options;
 

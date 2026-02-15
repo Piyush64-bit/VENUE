@@ -210,3 +210,226 @@ The system uses Winston for structured JSON logging with environment-aware outpu
 - **Local Development**: Color-coded pretty-print for rapid debugging
 - **Production**: Newline-delimited JSON format for ingestion into log aggregation systems (ELK, CloudWatch)
 - All logs include: timestamp, request ID, service layer, operation type, and context data
+
+## 8. Testing Architecture
+
+VENUE implements a comprehensive multi-layered testing strategy ensuring code quality, reliability, and performance at scale.
+
+### Testing Pyramid
+
+```mermaid
+graph TD
+    E2E[E2E Tests - Manual/Future]
+    Integration[Integration Tests - 11 suites]
+    Unit[Unit Tests - 11 suites]
+    Load[Load Tests - 9 k6 scripts]
+    
+    E2E --> Integration
+    Integration --> Unit
+    Load -.Parallel.-> Integration
+    
+    style E2E fill:#f9f,stroke:#333
+    style Integration fill:#bbf,stroke:#333
+    style Unit fill:#bfb,stroke:#333
+    style Load fill:#ffb,stroke:#333
+```
+
+### Unit Tests (Jest)
+
+**Purpose**: Validate isolated business logic without external dependencies
+
+**Coverage**:
+- `APIFeatures.test.js` - Query filtering, sorting, pagination
+- `autoSlotGenerator.test.js` - Time slot generation algorithms
+- `generateSlots.test.js` - Slot scheduling logic
+- `passwordHasher.test.js` - Argon2 security implementations
+- `middleware.test.js` - Auth verification & role-based access
+- `globalErrorHandler.test.js` - Error response formatting
+- `utils.test.js` - Helper function validation
+
+**Command**: `npm run test:unit`
+
+### Integration Tests (Jest + Supertest)
+
+**Purpose**: Validate complete API flows with real database interactions
+
+**Coverage**:
+- `auth.test.js` - Registration, login, token management
+- `booking.test.js` - Booking creation, cancellation, waitlist promotion
+- `event.test.js` - Event CRUD operations
+- `movie.test.js` - Movie catalog management
+- `organizer.test.js` - Organizer dashboard operations
+- `slot.test.js` - Slot availability and booking flow
+- `user.test.js` - User profile management
+
+**Features**:
+- Isolated test database (`venue_test`)
+- Transaction support for test/production parity
+- Automatic database cleanup between tests
+- Test-specific environment variables
+
+**Command**: `npm run test:integration`
+
+### Load Testing (k6)
+
+**Purpose**: Validate system behavior under concurrent load and stress conditions
+
+**Test Suites**:
+
+1. **Standard Load Tests**:
+   - `load-test.js` - General API stress (20→50→100 VUs)
+   - `booking-concurrency.js` - Race condition validation
+   - `rate-limit-test.js` - Rate limiter effectiveness
+
+2. **Load Balancer Tests**:
+   - `load-balancer-health.js` - Health check distribution
+   - `load-balancer-distribution.js` - Request routing analysis
+   - `load-balancer-session.js` - Session persistence
+   - `load-balancer-failover.js` - Failure recovery
+   - `load-balancer-stress.js` - Multi-backend stress
+   - `load-balancer-websocket.js` - WebSocket load
+
+**Metrics Tracked**:
+- HTTP request duration (p95, p99)
+- Success/error rates
+- Concurrent booking conflicts
+- Rate limit triggers
+- Database transaction rollbacks
+
+**Commands**: `npm run k6:load`, `npm run k6:booking`, etc.
+
+### Test Environment Configuration
+
+**Environment Isolation**:
+```javascript
+// Conditional transaction handling
+const useTransactions = process.env.NODE_ENV !== 'test';
+
+// Rate limiting bypass
+if (process.env.NODE_ENV === 'test' || 
+    process.env.DISABLE_RATE_LIMIT === 'true') {
+  return (req, res, next) => next();
+}
+```
+
+**Test Database Safety**:
+- Enforced naming convention: `*_test`
+- Automatic validation in setup scripts
+- Complete collection wipe between test runs
+- Separate Redis namespace for test cache
+
+### Coverage Thresholds
+
+```javascript
+coverageThreshold: {
+  global: {
+    branches: 75,
+    functions: 70,
+    lines: 80,
+    statements: 80,
+  },
+}
+```
+
+**Current Coverage**: 85%+ on critical paths (bookings, auth, transactions)
+
+## 9. CI/CD Pipeline Architecture
+
+### GitHub Actions Workflow
+
+The CI/CD pipeline runs on every push to `main`, `develop`, and `staging` branches, as well as pull requests.
+
+```mermaid
+graph LR
+    A[Git Push] --> B[Code Quality]
+    A --> C[Backend Tests]
+    A --> D[Frontend Tests]
+    
+    B --> E[Lint Check]
+    C --> F[Unit Tests]
+    C --> G[Integration Tests]
+    C --> H[Coverage Report]
+    
+    D --> I[Frontend Tests]
+    D --> J[Build]
+    
+    F --> K[Docker Build]
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    
+    K --> L[Security Scan]
+    K --> M[Integration Test]
+    
+    L --> N[Deploy]
+    M --> N
+```
+
+### Pipeline Stages
+
+#### 1. Code Quality & Linting
+- ESLint validation for backend
+- ESLint + Prettier for frontend
+- Code formatting checks
+
+#### 2. Backend Testing (Matrix: Node 18, 20)
+- **Services**: MongoDB 7 + Redis 7
+- **Unit Tests**: Isolated logic validation
+- **Integration Tests**: API endpoint testing with live DB
+- **Coverage**: Codecov upload with 80% threshold
+- **Artifacts**: Test results + coverage reports
+
+#### 3. Frontend Testing
+- Vitest unit/component tests
+- Coverage reporting
+- Production build validation
+- Bundle size analysis
+- Build artifact archival
+
+#### 4. Docker Build & Security
+- Multi-stage image builds
+- Docker layer caching (GitHub cache)
+- **Trivy security scanning**:
+  - Vulnerability detection (CRITICAL/HIGH)
+  - SARIF report generation
+  - GitHub Security integration
+- Docker Compose validation
+
+#### 5. Security Auditing
+- `npm audit` on both frontend/backend
+- Dependency vulnerability reports
+- Moderate+ severity tracking
+- JSON audit logs uploaded as artifacts
+
+#### 6. Integration Testing
+- Full Docker Compose environment
+- MongoDB + Redis + Backend services
+- Health check validation (30s timeout)
+- End-to-end API workflow tests
+- Automatic log collection on failure
+
+#### 7. Build Summary
+- Aggregate status from all stages
+- Pass/fail reporting for each job
+- Deployment gate for production
+
+### Deployment Strategy
+
+**Branches**:
+- `main` → Production deployment
+- `staging` → Staging environment
+- `develop` → Development environment
+
+**Deployment Platforms**:
+- Railway / Render / Fly.io (auto-deploy on push)
+- Docker images: `ghcr.io/username/venue-{backend,frontend}`
+- Kubernetes manifests for orchestrated deployments
+
+### Security in CI/CD
+
+- **Secrets Management**: GitHub Secrets for sensitive env vars
+- **Image Scanning**: Trivy detects CVEs before deployment
+- **Dependency Auditing**: Automated vulnerability checks
+- **SARIF Upload**: Security findings in GitHub Security tab
+- **Fail-Safe**: Continue-on-error for non-blocking security checks
