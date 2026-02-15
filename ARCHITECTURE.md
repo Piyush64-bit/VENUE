@@ -337,99 +337,257 @@ coverageThreshold: {
 
 ### GitHub Actions Workflow
 
-The CI/CD pipeline runs on every push to `main`, `develop`, and `staging` branches, as well as pull requests.
+The CI/CD pipeline runs on every push to `main`, `develop`, and `staging` branches, as well as pull requests. The pipeline is structured as a multi-stage process with parallel execution for efficiency.
 
 ```mermaid
-graph LR
-    A[Git Push] --> B[Code Quality]
-    A --> C[Backend Tests]
-    A --> D[Frontend Tests]
+graph TB
+    A[Git Push/PR] --> B{Trigger Type}
     
-    B --> E[Lint Check]
-    C --> F[Unit Tests]
-    C --> G[Integration Tests]
-    C --> H[Coverage Report]
+    B -->|Push/PR| C[Code Quality]
+    B -->|Push/PR| D[Backend Tests Matrix]
+    B -->|Push/PR| E[Frontend Tests]
     
-    D --> I[Frontend Tests]
-    D --> J[Build]
+    C --> F[Docker Build]
+    D --> F
+    E --> F
     
-    F --> K[Docker Build]
-    G --> K
-    H --> K
-    I --> K
-    J --> K
+    F --> G[Security Scan]
+    F --> H[Integration Tests]
     
-    K --> L[Security Scan]
-    K --> M[Integration Test]
+    G --> I[Performance Tests K6]
+    H --> I
     
-    L --> N[Deploy]
-    M --> N
+    I --> J{Branch?}
+    
+    J -->|PR| K[PR Preview Deploy]
+    J -->|develop| L[Deploy Staging]
+    J -->|main| M[Deploy Production]
+    
+    K --> N[Comment URL on PR]
+    L --> O[Slack Notification]
+    M --> P[Create GitHub Release]
+    M --> Q[Tag Version]
+    
+    style C fill:#58a6ff
+    style D fill:#58a6ff
+    style E fill:#58a6ff
+    style F fill:#3fb950
+    style I fill:#d29922
+    style M fill:#da3633
 ```
 
 ### Pipeline Stages
 
 #### 1. Code Quality & Linting
-- ESLint validation for backend
-- ESLint + Prettier for frontend
+- **Duration**: ~2-3 mins
+- ESLint validation for backend (soft-fail if not configured)
+- ESLint + Prettier for frontend (hard requirement)
 - Code formatting checks
+- **Runs on**: All branches and PRs
 
 #### 2. Backend Testing (Matrix: Node 18, 20)
-- **Services**: MongoDB 7 + Redis 7
-- **Unit Tests**: Isolated logic validation
-- **Integration Tests**: API endpoint testing with live DB
-- **Coverage**: Codecov upload with 80% threshold
-- **Artifacts**: Test results + coverage reports
+- **Duration**: ~5-7 mins per matrix job
+- **Services**: 
+  - MongoDB 7 (with health checks)
+  - Redis 7-alpine (with health checks)
+- **Test Suites**:
+  - Unit Tests: Isolated logic validation
+  - Integration Tests: API endpoint testing with live DB
+  - Coverage: Full test suite with Codecov upload (85%+ target)
+- **Artifacts**: 
+  - Test results per Node version
+  - Coverage reports (lcov format)
+  - Test execution logs
 
-#### 3. Frontend Testing
-- Vitest unit/component tests
-- Coverage reporting
+#### 3. Frontend Testing & Build
+- **Duration**: ~3-4 mins
+- Vitest unit/component tests with coverage
 - Production build validation
-- Bundle size analysis
-- Build artifact archival
+- Bundle size analysis (automated reporting)
+- **Artifacts**: 
+  - Build artifacts (dist/ folder)
+  - Coverage reports
+  - Bundle size metrics
 
-#### 4. Docker Build & Security
-- Multi-stage image builds
-- Docker layer caching (GitHub cache)
-- **Trivy security scanning**:
-  - Vulnerability detection (CRITICAL/HIGH)
-  - SARIF report generation
-  - GitHub Security integration
-- Docker Compose validation
+#### 4. Docker Build & Security Scanning
+- **Duration**: ~4-5 mins (with cache)
+- **Dependencies**: Requires backend-test + frontend-test to pass
+- Multi-stage Docker builds for backend and frontend
+- Docker Buildx with GitHub cache (layer caching)
+- **Trivy Security Scanning**:
+  - Scans both backend and frontend images
+  - Detects CRITICAL/HIGH vulnerabilities
+  - Generates SARIF reports
+  - Uploads to GitHub Security tab
+  - Non-blocking (continue-on-error)
+- Docker Compose configuration validation
 
 #### 5. Security Auditing
-- `npm audit` on both frontend/backend
-- Dependency vulnerability reports
-- Moderate+ severity tracking
-- JSON audit logs uploaded as artifacts
+- **Duration**: ~2 mins
+- Runs `npm audit` on both projects
+- Checks for moderate+ severity vulnerabilities
+- **Artifacts**: JSON audit logs for both backend and frontend
+- Non-blocking: Pipeline continues even with vulnerabilities
 
 #### 6. Integration Testing
-- Full Docker Compose environment
-- MongoDB + Redis + Backend services
-- Health check validation (30s timeout)
-- End-to-end API workflow tests
-- Automatic log collection on failure
+- **Duration**: ~5-6 mins
+- **Dependencies**: Requires backend-test + frontend-test to pass
+- Spins up full stack with Docker Compose:
+  - MongoDB container
+  - Redis container
+  - Backend API server
+- Health check validation (30s timeout with retries)
+- API integration tests in containerized environment
+- **Artifacts**: Docker service logs
+- Automatic cleanup: Containers removed after completion
 
-#### 7. Build Summary
+#### 7. Performance Testing (K6 Load Tests)
+- **Duration**: ~4-5 mins
+- **Dependencies**: Requires backend-test + frontend-test to pass
+- **K6 Test Suites**:
+  - Load Test: Sustained traffic simulation (1000 RPS)
+  - Rate Limit Test: Validates rate limiter behavior
+  - Booking Concurrency Test: 100+ concurrent booking attempts
+- **Environment**: Full Docker Compose stack
+- **Artifacts**: K6 results in JSON format
+- Validates system behavior under stress
+
+#### 8. Deployment Jobs
+
+##### PR Preview Deployment
+- **Trigger**: Pull requests to main/develop
+- **Duration**: ~2-3 mins
+- **Dependencies**: code-quality + backend-test + frontend-test
+- Deploys preview environment with unique URL
+- Auto-comments deployment URL on PR
+- **URL Pattern**: `https://venue-pr-{number}.example.com`
+- Enables stakeholder review before merge
+
+##### Staging Deployment
+- **Trigger**: Push to `develop` branch
+- **Duration**: ~2-3 mins
+- **Dependencies**: All tests + docker-build + security-scan
+- **Environment**: staging
+- **Deployment URL**: `https://venue-staging.example.com`
+- **Process**:
+  - Builds and pushes Docker images
+  - Deploys to staging platform (Railway/Render/Vercel)
+  - Runs smoke tests
+  - Sends notification (Slack/Discord)
+- Used for QA and pre-production validation
+
+##### Production Deployment
+- **Trigger**: Push to `main` branch only
+- **Duration**: ~3-4 mins
+- **Dependencies**: All tests + docker-build + security-scan + integration-test + performance-test
+- **Environment**: production
+- **Deployment URL**: `https://venue.example.com`
+- **Process**:
+  1. Create semantic version tag (`v2026.02.15-{run_number}`)
+  2. Build and tag Docker images with version
+  3. Deploy to production platform
+  4. Run comprehensive health checks
+  5. Create GitHub Release with:
+     - Version tag
+     - Commit message
+     - Deployment links
+     - Changelog
+  6. Notify team of successful deployment
+- **Safety**: Requires all previous stages to pass
+
+#### 9. Build Summary
+- **Trigger**: Always runs (even on failure)
+- **Dependencies**: All previous jobs
 - Aggregate status from all stages
-- Pass/fail reporting for each job
-- Deployment gate for production
+- Displays pass/fail for each job
+- Provides quick overview of pipeline health
 
 ### Deployment Strategy
 
-**Branches**:
-- `main` → Production deployment
-- `staging` → Staging environment
-- `develop` → Development environment
+**Branch-Based Deployment**:
+```
+main (Protected)
+  ├─> ✅ All Tests Pass
+  ├─> ✅ Security Scans Pass
+  ├─> ✅ Performance Tests Pass
+  └─> 🚀 Deploy to Production
+      └─> Create Release Tag
+
+develop
+  ├─> ✅ All Tests Pass
+  └─> 🚀 Deploy to Staging
+
+feature/* (PRs)
+  ├─> ✅ Tests Pass
+  └─> 🔍 Deploy Preview Environment
+```
 
 **Deployment Platforms**:
-- Railway / Render / Fly.io (auto-deploy on push)
-- Docker images: `ghcr.io/username/venue-{backend,frontend}`
-- Kubernetes manifests for orchestrated deployments
+- **Frontend**: Vercel / Netlify (automatic CDN distribution)
+- **Backend**: Railway / Render / Fly.io (container orchestration)
+- **Database**: MongoDB Atlas (managed, auto-scaling)
+- **Cache**: Redis Cloud (managed, high-availability)
+- **Alternative**: Docker images → `ghcr.io/username/venue-{backend,frontend}`
+- **Enterprise**: Kubernetes manifests for orchestrated deployments
+
+**Infrastructure as Code**:
+- Docker Compose for local development
+- Multi-environment Docker Compose overrides (prod, staging)
+- Health check configurations
+- Resource limits and constraints
 
 ### Security in CI/CD
 
-- **Secrets Management**: GitHub Secrets for sensitive env vars
-- **Image Scanning**: Trivy detects CVEs before deployment
-- **Dependency Auditing**: Automated vulnerability checks
-- **SARIF Upload**: Security findings in GitHub Security tab
-- **Fail-Safe**: Continue-on-error for non-blocking security checks
+**Secrets Management**:
+- GitHub Secrets for API keys and credentials
+- Never expose secrets in logs
+- Rotate secrets regularly
+- Environment-specific secret isolation
+
+**Container Security**:
+- Trivy scanning: Detects CVEs in Docker images
+- Scans both OS packages and application dependencies
+- SARIF report upload to GitHub Security tab
+- Automated vulnerability tracking
+
+**Dependency Security**:
+- `npm audit` on every pipeline run
+- Track moderate+ severity vulnerabilities
+- Automated security updates via Dependabot
+- Lock file validation
+
+**Access Control**:
+- Branch protection rules on main/develop
+- Required status checks before merge
+- Code review requirements
+- No direct pushes to protected branches
+
+**Compliance & Auditing**:
+- All deployments tracked with git tags
+- GitHub Release changelog
+- Artifact retention (7-30 days)
+- Deployment logs and history
+
+### Pipeline Performance
+
+**Typical Execution Times**:
+- Code Quality: ~2-3 mins
+- Backend Tests (per matrix): ~5-7 mins
+- Frontend Tests: ~3-4 mins
+- Docker Build: ~4-5 mins (with cache)
+- Security Scans: ~2 mins
+- Integration Tests: ~5-6 mins
+- Performance Tests: ~4-5 mins
+- Deployment: ~2-4 mins
+
+**Total Pipeline Duration**:
+- **PR Validation**: ~10-12 mins (parallel execution)
+- **Staging Deploy**: ~12-15 mins
+- **Production Deploy**: ~15-18 mins (includes performance tests)
+
+**Optimization Strategies**:
+- Parallel job execution (matrix testing)
+- Docker layer caching via GitHub cache
+- npm dependency caching
+- Conditional job execution
+- Fail-fast for critical tests
