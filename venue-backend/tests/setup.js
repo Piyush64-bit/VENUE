@@ -33,6 +33,21 @@ beforeAll(async () => {
     });
 
     logger.info('✓ Test database connected');
+
+    // Try to connect to Redis (optional - tests can run without it)
+    try {
+      if (process.env.REDIS_URL && redisService.client) {
+        // Redis connection is attempted in redis.service.js
+        // Just wait a bit for it to potentially connect
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (redisService.client.status === 'ready') {
+          logger.info('✓ Redis connected');
+        }
+      }
+    } catch (redisError) {
+      logger.warn('⚠️  Redis not available, continuing without it:', redisError.message);
+      // Continue - many tests don't need Redis
+    }
   } catch (error) {
     logger.error('Failed to connect to test database:', error);
     throw error;
@@ -64,9 +79,14 @@ afterAll(async () => {
     }
 
     // Close Redis connection if exists
-    if (redisService.client && redisService.client.status === 'ready') {
-      await redisService.client.quit();
-      logger.info('✓ Redis connection closed');
+    try {
+      if (redisService.client && redisService.client.status === 'ready') {
+        await redisService.client.quit();
+        logger.info('✓ Redis connection closed');
+      }
+    } catch (redisError) {
+      // Ignore Redis cleanup errors
+      logger.debug('Redis cleanup skipped:', redisError.message);
     }
 
     // Give time for connections to close
