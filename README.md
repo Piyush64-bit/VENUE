@@ -1,14 +1,8 @@
 # VENUE: Event & Movie Booking Platform
 
-[![CI Pipeline](https://github.com/YOUR_USERNAME/VENUE/workflows/CI%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/VENUE/actions)
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/VENUE/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/VENUE)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D%2018.0.0-brightgreen.svg)](https://nodejs.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-
 **A booking system showcasing distributed systems patterns, concurrency control, and real-time features.**
 
-🌐 **Live Demo**: [venue.example.com](https://venue.example.com) | 📚 **API Docs**: [api.venue.example.com/docs](https://api.venue.example.com/docs)
+🌐 **Live Demo**: [https://venueapp.vercel.app] | 📚 **API Docs**: [https://venue-z8ti.onrender.com/docs]
 
 A full-stack booking platform built to handle concurrent reservations, real-time inventory updates, and multi-tenant event management. This project tackles the classic distributed systems problem: preventing double-bookings when multiple users attempt to reserve the same resource simultaneously.
 

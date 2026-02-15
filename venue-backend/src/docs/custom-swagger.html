@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Venue API Documentation</title>
+  <link rel="icon" type="image/png" href="/docs/logo.png" />
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════
+       VENUE THEME TOKENS
+       Matches: venue-frontend/tailwind.config.js
+    ═══════════════════════════════ */
+    :root {
+      --bg-primary: #0B0D10;
+      --bg-secondary: #12151C;
+      --bg-card: #171B24;
+      --bg-card-hover: #1c2130;
+      --bg-code: #0d0f14;
+      --border: #262B36;
+      --border-hover: #353c4d;
+
+      --accent: #F28C28;
+      --accent-hover: #FF9F43;
+      --accent-glow: rgba(242, 140, 40, 0.25);
+      --accent-subtle: rgba(242, 140, 40, 0.08);
+
+      --text-primary: #FFFFFF;
+      --text-secondary: #A9B0C2;
+      --text-muted: #6b7280;
+
+      --green: #22c55e;
+      --green-subtle: rgba(34, 197, 94, 0.08);
+      --red: #ef4444;
+      --red-subtle: rgba(239, 68, 68, 0.08);
+      --yellow: #eab308;
+      --yellow-subtle: rgba(234, 179, 8, 0.08);
+      --blue: #3b82f6;
+      --blue-subtle: rgba(59, 130, 246, 0.08);
+      --cyan: #06b6d4;
+      --cyan-subtle: rgba(6, 182, 212, 0.08);
+      --purple: #a855f7;
+      --purple-subtle: rgba(168, 85, 247, 0.08);
+
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection { background: var(--accent); color: #000; }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-hover); }
+
+    .container { max-width: 1260px; margin: 0 auto; padding: 0 24px; position: relative; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    /* ═══════════════════════════════
+       HERO
+    ═══════════════════════════════ */
+    .hero {
+      position: relative;
+      padding: 72px 0 56px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: -10%;
+      width: 120%;
+      height: 180%;
+      background:
+        radial-gradient(ellipse at 25% 30%, rgba(242, 140, 40, 0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 70%, rgba(255, 159, 67, 0.04) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(242, 140, 40, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 140, 40, 0.025) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+    }
+
+    .hero-content { text-align: center; position: relative; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: var(--accent-subtle);
+      border: 1px solid rgba(242, 140, 40, 0.2);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+
+    .hero-badge .pulse {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      50% { opacity: .8; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    }
+
+    .hero-logo {
+      width: 68px; height: 68px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 50px var(--accent-glow);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.2rem);
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent-hover) 60%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 28px;
+    }
+
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .hero-meta-item .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    /* ═══════════════════════════════
+       STICKY NAV
+    ═══════════════════════════════ */
+    .nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 13, 16, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .nav-inner::-webkit-scrollbar { display: none; }
+
+    .nav-tab {
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all .2s;
+      user-select: none;
+    }
+    .nav-tab:hover { color: var(--text-secondary); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ═══════════════════════════════
+       SECTIONS (tab content)
+    ═══════════════════════════════ */
+    .doc-section { display: none; padding: 44px 0 56px; animation: fadeUp .25s ease; }
+    .doc-section.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .sec-title { font-size: 26px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 6px; }
+    .sec-desc { font-size: 15px; color: var(--text-secondary); margin-bottom: 36px; max-width: 680px; }
+
+    /* ═══════════════════════════════
+       CARDS
+    ═══════════════════════════════ */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: all .2s;
+    }
+    .card:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0,0,0,.25);
+    }
+
+    .card-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+
+    .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* ═══════════════════════════════
+       CODE BLOCKS
+    ═══════════════════════════════ */
+    .code-block {
+      position: relative;
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin: 14px 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: rgba(255,255,255,.015);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .code-block pre {
+      padding: 14px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #c9d1d9;
+    }
+
+    .code-block pre .cm { color: #6e7681; }
+    .code-block pre .kw { color: #ff7b72; }
+    .code-block pre .st { color: #a5d6ff; }
+    .code-block pre .nm { color: #79c0ff; }
+    .code-block pre .fn { color: #d2a8ff; }
+    .code-block pre .ur { color: #7ee787; }
+    .code-block pre .or { color: var(--accent); }
+
+    /* ═══════════════════════════════
+       TABLES
+    ═══════════════════════════════ */
+    .tbl-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--bg-card); }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(38, 43, 54, .5);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(242, 140, 40, .015); }
+
+    /* ═══════════════════════════════
+       BADGES
+    ═══════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-get { background: var(--green-subtle); color: var(--green); }
+    .badge-post { background: var(--blue-subtle); color: var(--blue); }
+    .badge-patch { background: var(--yellow-subtle); color: var(--yellow); }
+    .badge-delete { background: var(--red-subtle); color: var(--red); }
+    .badge-accent { background: var(--accent-subtle); color: var(--accent); }
+    .badge-cyan { background: var(--cyan-subtle); color: var(--cyan); }
+    .badge-purple { background: var(--purple-subtle); color: var(--purple); }
+
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    .inline-code {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════
+       FLOW STEPS
+    ═══════════════════════════════ */
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .flow-step .n {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .flow-arr { color: var(--text-muted); font-size: 16px; }
+
+    /* ═══════════════════════════════
+       INFO BOXES
+    ═══════════════════════════════ */
+    .info {
+      padding: 18px 22px;
+      border-radius: var(--radius);
+      border-left: 3px solid;
+      margin: 18px 0;
+    }
+    .info.note { background: var(--blue-subtle); border-color: var(--blue); }
+    .info.warn { background: var(--yellow-subtle); border-color: var(--yellow); }
+    .info.tip { background: var(--green-subtle); border-color: var(--green); }
+    .info.danger { background: var(--red-subtle); border-color: var(--red); }
+    .info-t { font-weight: 700; font-size: 13px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+    .info p { font-size: 13px; color: var(--text-secondary); }
+
+    /* ═══════════════════════════════
+       STAT GRID
+    ═══════════════════════════════ */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 20px 0; }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .stat-v {
+      font-size: 30px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-l { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+
+    /* ═══════════════════════════════
+       ARCHITECTURE
+    ═══════════════════════════════ */
+    .arch {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      margin: 20px 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    .arch-row { display: flex; justify-content: center; gap: 14px; margin: 6px 0; flex-wrap: wrap; }
+    .arch-box {
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid;
+      min-width: 130px;
+    }
+    .arch-conn { color: var(--text-muted); font-size: 18px; display: flex; justify-content: center; padding: 3px 0; }
+
+    /* ═══════════════════════════════
+       COLLAPSIBLE
+    ═══════════════════════════════ */
+    .collapse-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 16px 22px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all .2s;
+      margin-bottom: 3px;
+      font-family: inherit;
+    }
+    .collapse-btn:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+    .collapse-btn .ic { transition: transform .2s; font-size: 13px; color: var(--text-muted); }
+    .collapse-btn.open .ic { transform: rotate(180deg); }
+    .collapse-body {
+      display: none;
+      padding: 22px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin-top: -3px;
+      margin-bottom: 14px;
+    }
+    .collapse-body.open { display: block; }
+
+    /* ═══════════════════════════════
+       FOOTER
+    ═══════════════════════════════ */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 36px 0;
+      text-align: center;
+    }
+    .footer p { font-size: 13px; color: var(--text-muted); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero { padding: 44px 0 32px; }
+    }
+
+    /* Section divider */
+    .sec-divider {
+      border: none;
+      height: 1px;
+      background: var(--border);
+      margin: 48px 0 40px;
+    }
+
+    /* ═══════════════════════════════
+       SWAGGER UI — FULL VENUE DARK/ORANGE THEME
+    ═══════════════════════════════ */
+    .swagger-ui { font-family: 'Inter', sans-serif !important; }
+
+    .swagger-ui .topbar { display: none !important; }
+
+    .swagger-ui,
+    .swagger-ui .wrapper { background: var(--bg-primary) !important; }
+
+    /* Hide the default Swagger info header (we have our own hero) */
+    .swagger-ui .info hgroup.main { display: none !important; }
+    .swagger-ui .info .description { display: none !important; }
+    .swagger-ui .info { margin: 8px 0 !important; padding: 0 !important; }
+
+    /* Scheme/server */
+    .swagger-ui .scheme-container {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius) !important;
+      padding: 16px !important;
+      box-shadow: none !important;
+    }
+    .swagger-ui .scheme-container select {
+      background: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 6px !important;
+    }
+
+    /* Tag sections */
+    .swagger-ui .opblock-tag-section { margin-bottom: 10px !important; }
+    .swagger-ui .opblock-tag {
+      border-bottom: 1px solid var(--border) !important;
+      color: var(--text-primary) !important;
+      font-family: 'Inter', sans-serif !important;
+      font-weight: 700 !important;
+    }
+    .swagger-ui .opblock-tag:hover { background: var(--bg-card) !important; }
+    .swagger-ui .opblock-tag small { color: var(--text-muted) !important; }
+
+    /* Endpoint blocks */
+    .swagger-ui .opblock {
+      border-radius: var(--radius-sm) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: none !important;
+      margin-bottom: 6px !important;
+      background: var(--bg-secondary) !important;
+    }
+    .swagger-ui .opblock .opblock-summary { border: none !important; padding: 8px 14px !important; }
+    .swagger-ui .opblock .opblock-summary-method {
+      border-radius: 6px !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      min-width: 64px !important;
+      padding: 6px 10px !important;
+    }
+    .swagger-ui .opblock .opblock-summary-path {
+      color: var(--text-primary) !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 13px !important;
+    }
+    .swagger-ui .opblock .opblock-summary-path__deprecated { color: var(--text-muted) !important; }
+    .swagger-ui .opblock .opblock-summary-description { color: var(--text-secondary) !important; font-size: 13px !important; }
+
+    /* GET */
+    .swagger-ui .opblock.opblock-get { background: rgba(34, 197, 94, 0.04) !important; border-color: rgba(34, 197, 94, 0.18) !important; }
+    .swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--green) !important; color: #000 !important; }
+    .swagger-ui .opblock.opblock-get .opblock-summary { border-color: rgba(34, 197, 94, 0.18) !important; }
+
+    /* POST */
+    .swagger-ui .opblock.opblock-post { background: rgba(59, 130, 246, 0.04) !important; border-color: rgba(59, 130, 246, 0.18) !important; }
+    .swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--blue) !important; color: #fff !important; }
+
+    /* PATCH / PUT */
+    .swagger-ui .opblock.opblock-patch,
+    .swagger-ui .opblock.opblock-put { background: rgba(242, 140, 40, 0.04) !important; border-color: rgba(242, 140, 40, 0.18) !important; }
+    .swagger-ui .opblock.opblock-patch .opblock-summary-method,
+    .swagger-ui .opblock.opblock-put .opblock-summary-method { background: var(--accent) !important; color: #000 !important; }
+
+    /* DELETE */
+    .swagger-ui .opblock.opblock-delete { background: rgba(239, 68, 68, 0.04) !important; border-color: rgba(239, 68, 68, 0.18) !important; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: var(--red) !important; color: #fff !important; }
+
+    /* Expanded body */
+    .swagger-ui .opblock-body { background: var(--bg-secondary) !important; }
+    .swagger-ui .opblock-body pre.microlight {
+      background: var(--bg-code) !important;
+      color: #c9d1d9 !important;
+      border-radius: var(--radius-sm) !important;
+      border: 1px solid var(--border) !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 12px !important;
+    }
+    .swagger-ui .opblock-section-header {
+      background: var(--bg-card) !important;
+      border-bottom: 1px solid var(--border) !important;
+      box-shadow: none !important;
+    }
+    .swagger-ui .opblock-section-header h4 { color: var(--text-primary) !important; font-size: 13px !important; }
+
+    /* Params */
+    .swagger-ui .parameters-col_description input[type="text"],
+    .swagger-ui .parameters-col_description textarea,
+    .swagger-ui .parameters-col_description select,
+    .swagger-ui .body-param textarea {
+      background: var(--bg-code) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 6px !important;
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+    .swagger-ui table.parameters thead tr td,
+    .swagger-ui table.parameters thead tr th {
+      color: var(--text-muted) !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .swagger-ui .parameters-col_name { color: var(--text-primary) !important; }
+    .swagger-ui .parameter__name { color: var(--text-primary) !important; font-family: 'JetBrains Mono', monospace !important; }
+    .swagger-ui .parameter__type { color: var(--text-secondary) !important; }
+    .swagger-ui .parameter__name.required::after { color: var(--red) !important; }
+
+    /* Authorize button */
+    .swagger-ui .btn.authorize {
+      background: var(--accent) !important;
+      color: #000 !important;
+      border: none !important;
+      border-radius: var(--radius-sm) !important;
+      font-family: 'Inter', sans-serif !important;
+      font-weight: 700 !important;
+      padding: 8px 20px !important;
+      transition: background .2s !important;
+    }
+    .swagger-ui .btn.authorize:hover { background: var(--accent-hover) !important; }
+    .swagger-ui .btn.authorize svg { fill: #000 !important; }
+
+    /* Execute btn */
+    .swagger-ui .btn.execute {
+      background: var(--accent) !important;
+      color: #000 !important;
+      border: none !important;
+      border-radius: 6px !important;
+      font-weight: 700 !important;
+    }
+    .swagger-ui .btn.execute:hover { background: var(--accent-hover) !important; }
+
+    .swagger-ui .btn.cancel {
+      background: transparent !important;
+      color: var(--red) !important;
+      border: 1px solid var(--red) !important;
+      border-radius: 6px !important;
+    }
+
+    .swagger-ui .btn { border-radius: 6px !important; font-family: 'Inter', sans-serif !important; }
+
+    /* Try it out */
+    .swagger-ui .try-out__btn {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+      border-radius: 6px !important;
+    }
+    .swagger-ui .try-out__btn:hover { background: var(--accent-subtle) !important; }
+
+    /* Responses */
+    .swagger-ui .responses-wrapper { background: transparent !important; }
+    .swagger-ui .response-col_status { color: var(--text-primary) !important; font-family: 'JetBrains Mono', monospace !important; }
+    .swagger-ui .response-col_description { color: var(--text-secondary) !important; }
+    .swagger-ui .responses-inner { padding: 16px !important; }
+    .swagger-ui .responses-table thead td { color: var(--text-muted) !important; }
+    .swagger-ui .live-responses-table .response-col_status { color: var(--text-primary) !important; }
+
+    /* Response body */
+    .swagger-ui .highlight-code,
+    .swagger-ui .example.microlight,
+    .swagger-ui .microlight {
+      background: var(--bg-code) !important;
+      color: #c9d1d9 !important;
+      border-radius: var(--radius-sm) !important;
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Models */
+    .swagger-ui section.models { border: 1px solid var(--border) !important; border-radius: var(--radius) !important; }
+    .swagger-ui section.models h4 { color: var(--text-primary) !important; font-family: 'Inter', sans-serif !important; }
+    .swagger-ui section.models .model-container { background: var(--bg-card) !important; border-radius: var(--radius-sm) !important; }
+    .swagger-ui .model-box { background: var(--bg-code) !important; }
+    .swagger-ui .model .property { color: var(--text-secondary) !important; }
+    .swagger-ui .model-title { color: var(--text-primary) !important; font-family: 'JetBrains Mono', monospace !important; }
+    .swagger-ui section.models .model-box { background: var(--bg-code) !important; }
+    .swagger-ui .model { color: var(--text-secondary) !important; }
+
+    /* Auth modal */
+    .swagger-ui .dialog-ux .modal-ux {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius-lg) !important;
+      color: var(--text-primary) !important;
+    }
+    .swagger-ui .dialog-ux .modal-ux-header { border-bottom: 1px solid var(--border) !important; }
+    .swagger-ui .dialog-ux .modal-ux-header h3 { color: var(--text-primary) !important; }
+    .swagger-ui .dialog-ux .modal-ux-content p { color: var(--text-secondary) !important; }
+    .swagger-ui .dialog-ux .modal-ux-content label { color: var(--text-secondary) !important; }
+    .swagger-ui .dialog-ux .modal-ux-content input {
+      background: var(--bg-code) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text-primary) !important;
+      border-radius: 6px !important;
+    }
+    .swagger-ui .dialog-ux .modal-ux .btn-done {
+      background: var(--accent) !important;
+      color: #000 !important;
+      border: none !important;
+      border-radius: 6px !important;
+      font-weight: 700 !important;
+    }
+    .swagger-ui .dialog-ux .backdrop-ux { background: rgba(0,0,0,.6) !important; }
+
+    /* Text */
+    .swagger-ui, .swagger-ui p, .swagger-ui span, .swagger-ui td, .swagger-ui label,
+    .swagger-ui .markdown p, .swagger-ui .renderedMarkdown p { color: var(--text-secondary) !important; }
+    .swagger-ui h4, .swagger-ui h3, .swagger-ui h2 { color: var(--text-primary) !important; }
+
+    /* Filter */
+    .swagger-ui .filter-container input {
+      background: var(--bg-code) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius-sm) !important;
+      padding: 8px 14px !important;
+    }
+
+    /* Select */
+    .swagger-ui select {
+      background: var(--bg-code) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 6px !important;
+    }
+
+    /* Tab headers in response */
+    .swagger-ui .tab li { color: var(--text-muted) !important; }
+    .swagger-ui .tab li.active { color: var(--text-primary) !important; }
+    .swagger-ui .tab li:first-of-type::after { background: var(--border) !important; }
+
+    /* SVGs */
+    .swagger-ui svg:not(:root) { fill: var(--text-secondary) !important; }
+    .swagger-ui .opblock-summary-control svg { fill: var(--text-muted) !important; }
+    .swagger-ui .expand-operation svg { fill: var(--text-muted) !important; }
+    .swagger-ui .btn.authorize svg { fill: #000 !important; }
+    .swagger-ui .unlocked svg { fill: var(--green) !important; }
+    .swagger-ui .locked svg { fill: var(--accent) !important; }
+
+    /* Content type selector */
+    .swagger-ui .opblock-body select {
+      background: var(--bg-code) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border) !important;
+    }
+
+    /* Scrollbar */
+    .swagger-ui ::-webkit-scrollbar { width: 6px; height: 6px; }
+    .swagger-ui ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    .swagger-ui ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* Response header */
+    .swagger-ui .responses-header td { color: var(--text-muted) !important; }
+
+    /* Copy to clipboard buttons */
+    .swagger-ui .copy-to-clipboard { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 4px !important; }
+    .swagger-ui .copy-to-clipboard button { background: transparent !important; }
+
+    /* Download link */
+    .swagger-ui .download-contents { background: var(--accent-subtle) !important; color: var(--accent) !important; border-radius: 4px !important; }
+
+    /* JSON Schema */
+    .swagger-ui .json-schema-2020-12 { color: var(--text-secondary) !important; }
+
+    /* Loading */
+    .swagger-ui .loading-container .loading::after { color: var(--accent) !important; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════ HERO ═══════ -->
+  <section class="hero">
+    <div class="hero-grid"></div>
+    <div class="container hero-content">
+      <div class="hero-badge"><span class="pulse"></span> v1.0.0</div>
+      <br />
+      <img class="hero-logo" src="/docs/logo.png" alt="Venue" />
+      <h1>Venue API</h1>
+      <p class="hero-sub">REST API powering real-time event &amp; movie booking with ACID transactions, WebSocket updates, and Redis-backed caching.</p>
+      <div class="hero-meta">
+        <span class="hero-meta-item"><span class="dot" style="background:var(--green)"></span>OpenAPI 3.0</span>
+        <span class="hero-meta-item"><span class="dot" style="background:var(--accent)"></span>JWT + httpOnly Cookies</span>
+        <span class="hero-meta-item"><span class="dot" style="background:var(--cyan)"></span>6-Tier Rate Limiting</span>
+        <span class="hero-meta-item"><span class="dot" style="background:var(--blue)"></span>Real-Time Socket.io</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ NAV ═══════ -->
+  <nav class="nav-bar">
+    <div class="container">
+      <div class="nav-inner">
+        <div class="nav-tab active" data-tab="overview">Overview</div>
+        <div class="nav-tab" data-tab="quickstart">Quick Start</div>
+        <div class="nav-tab" data-tab="auth">Authentication</div>
+        <div class="nav-tab" data-tab="architecture">Architecture</div>
+        <div class="nav-tab" data-tab="ratelimit">Rate Limiting</div>
+        <div class="nav-tab" data-tab="caching">Caching</div>
+        <div class="nav-tab" data-tab="realtime">Real-Time</div>
+        <div class="nav-tab" data-tab="errors">Errors</div>
+        <div class="nav-tab" data-tab="security">Security</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- ═══════ OVERVIEW ═══════ -->
+    <section id="overview" class="doc-section active">
+      <h2 class="sec-title">Platform Overview</h2>
+      <p class="sec-desc">Venue is a full-stack booking platform engineered to handle concurrent reservations, real-time seat inventory, and multi-tenant event management — without overselling a single ticket.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-v">7</div><div class="stat-l">API Modules</div></div>
+        <div class="stat-card"><div class="stat-v">30+</div><div class="stat-l">REST Endpoints</div></div>
+        <div class="stat-card"><div class="stat-v">6</div><div class="stat-l">Rate Limit Tiers</div></div>
+        <div class="stat-card"><div class="stat-v">ACID</div><div class="stat-l">Transaction Safety</div></div>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">Core Capabilities</h3>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon" style="background:var(--accent-subtle);color:var(--accent);">🎫</div><h3>Event &amp; Movie Booking</h3><p>Full lifecycle — create events/movies, manage time slots, bookings with seat selection and atomic capacity control.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--green-subtle);color:var(--green);">⚡</div><h3>Pessimistic Concurrency</h3><p>MongoDB ACID transactions with atomic <code class="inline-code">findOneAndUpdate</code> + <code class="inline-code">$inc</code> prevent double-bookings under concurrent load.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--blue-subtle);color:var(--blue);">🔌</div><h3>Real-Time WebSocket</h3><p>Socket.io delivers instant waitlist notifications — users get promoted the moment a seat frees up.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--cyan-subtle);color:var(--cyan);">🗄️</div><h3>Redis Caching</h3><p>Cache-aside on all GET endpoints with 60s TTL, automatic invalidation on mutations, fail-open degradation.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--accent-subtle);color:var(--accent);">🛡️</div><h3>6-Tier Rate Limiting</h3><p>Context-aware, Redis-backed — from global DDoS shield (1000/hr) to booking burst guard (5/min).</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--purple-subtle);color:var(--purple);">🏢</div><h3>Multi-Tenant Organizer</h3><p>Full dashboard: event/movie CRUD, slot management with overlap detection, auto-generation, analytics.</p></div>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;margin:28px 0 14px;">Tech Stack</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead><tbody>
+        <tr><td>Runtime</td><td><span class="badge badge-accent">Node.js</span> <span class="badge badge-accent">Express</span></td><td>HTTP server &amp; routing</td></tr>
+        <tr><td>Database</td><td><span class="badge badge-purple">MongoDB</span> <span class="badge badge-purple">Mongoose</span></td><td>ACID transactions + data layer</td></tr>
+        <tr><td>Cache</td><td><span class="badge badge-delete">Redis</span> <span class="badge badge-delete">ioredis</span></td><td>Caching + rate limit state</td></tr>
+        <tr><td>Real-Time</td><td><span class="badge badge-get">Socket.io</span></td><td>WebSocket for waitlist events</td></tr>
+        <tr><td>Auth</td><td><span class="badge badge-post">JWT</span> <span class="badge badge-post">Argon2id</span></td><td>Stateless auth + secure hashing</td></tr>
+        <tr><td>Validation</td><td><span class="badge badge-patch">Zod</span></td><td>Runtime type-safe validation</td></tr>
+        <tr><td>Storage</td><td><span class="badge badge-cyan">Cloudinary</span></td><td>Image uploads (5 MB max)</td></tr>
+        <tr><td>Logging</td><td><span class="badge badge-accent">Winston</span></td><td>Structured logs with redaction</td></tr>
+        <tr><td>Testing</td><td><span class="badge badge-purple">Jest</span> <span class="badge badge-purple">k6</span></td><td>Unit, integration &amp; load testing</td></tr>
+        <tr><td>Deploy</td><td><span class="badge badge-post">Docker</span></td><td>Containerized production</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <!-- ═══════ QUICK START ═══════ -->
+    <section id="quickstart" class="doc-section">
+      <h2 class="sec-title">Quick Start</h2>
+      <p class="sec-desc">Get up and running in three steps. All endpoints return standardized JSON responses.</p>
+      <h3 style="font-weight:700;margin-bottom:12px;">1 — Register</h3>
+      <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="fn">curl</span> -X <span class="kw">POST</span> <span class="ur">{{BASE_URL}}/api/v1/auth/register</span> \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{ "name": "John Doe", "email": "john@example.com", "password": "securePass123", "role": "USER" }'</span></pre></div>
+      <div class="code-block"><div class="code-header"><span>Response — 201</span></div>
+        <pre>{ <span class="st">"statusCode"</span>: <span class="nm">201</span>, <span class="st">"status"</span>: <span class="st">"success"</span>, <span class="st">"data"</span>: { <span class="st">"_id"</span>: <span class="st">"65a..."</span>, <span class="st">"name"</span>: <span class="st">"John Doe"</span>, <span class="st">"role"</span>: <span class="st">"USER"</span> } }</pre></div>
+      <div class="info tip"><div class="info-t">💡 Cookie Auth</div><p>On success, server sets <code class="inline-code">httpOnly</code> cookie <code class="inline-code">token</code> (7‑day). Also supports <code class="inline-code">Authorization: Bearer &lt;token&gt;</code> header.</p></div>
+      <h3 style="font-weight:700;margin:28px 0 12px;">2 — Browse Events</h3>
+      <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="cm"># Public — no auth required</span>
+<span class="fn">curl</span> <span class="ur">{{BASE_URL}}/api/v1/events?page=1&limit=10&sort=-startDate</span>
+
+<span class="cm"># With filters</span>
+<span class="fn">curl</span> <span class="ur">{{BASE_URL}}/api/v1/events?category=Music&price[lte]=500&fields=title,price,location</span></pre></div>
+      <h3 style="font-weight:700;margin:28px 0 12px;">3 — Book a Slot</h3>
+      <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="fn">curl</span> -X <span class="kw">POST</span> <span class="ur">{{BASE_URL}}/api/v1/bookings</span> \
+  -H <span class="st">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{ "slotId": "65a1...", "quantity": 2, "seats": ["A1", "A2"] }'</span></pre></div>
+      <div class="info warn"><div class="info-t">⚠️ Slot Full?</div><p>Auto-waitlisted. You'll get a <code class="inline-code">waitlist:promoted</code> Socket.io event when a seat opens.</p></div>
+      <h3 style="font-weight:700;margin:28px 0 12px;">4 — Check Bookings</h3>
+      <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="fn">curl</span> <span class="ur">{{BASE_URL}}/api/v1/bookings/my-bookings</span> \
+  -H <span class="st">"Authorization: Bearer YOUR_TOKEN"</span></pre></div>
+    </section>
+
+    <!-- ═══════ AUTH ═══════ -->
+    <section id="auth" class="doc-section">
+      <h2 class="sec-title">Authentication</h2>
+      <p class="sec-desc">JWT-based auth with httpOnly cookie transport. Passwords hashed with Argon2id.</p>
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Token Flow</h3>
+      <div class="flow">
+        <div class="flow-step"><span class="n">1</span>Register / Login</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">2</span>JWT in httpOnly cookie</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">3</span>Cookie sent auto</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">4</span>Server verifies</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">5</span>Logout clears</div>
+      </div>
+      <div class="tbl-wrap" style="margin-top:24px;"><table><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>
+        <tr><td>Token</td><td>JWT (HS256), 7-day expiry</td></tr>
+        <tr><td>Payload</td><td><code class="inline-code">{ userId, role }</code></td></tr>
+        <tr><td>Transport</td><td>httpOnly cookie + Bearer header</td></tr>
+        <tr><td>Cookie Flags</td><td><code class="inline-code">httpOnly</code> · <code class="inline-code">secure</code> (prod) · <code class="inline-code">sameSite: none</code> (prod)</td></tr>
+        <tr><td>Hashing</td><td>Argon2id — 64 MB, 3 iter, 4 threads</td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Endpoints</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead><tbody>
+        <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/api/v1/auth/register</td><td>No</td><td>Register. Body: name, email, password, role?</td></tr>
+        <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/api/v1/auth/login</td><td>No</td><td>Login. Sets httpOnly cookie.</td></tr>
+        <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/api/v1/auth/logout</td><td>Yes</td><td>Clears auth cookie.</td></tr>
+        <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/api/v1/auth/me</td><td>Yes</td><td>Current user profile.</td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Roles</h3>
+      <div class="card-grid">
+        <div class="card"><h3>👤 USER</h3><p>Browse, book, manage favorites, view bookings, update profile.</p></div>
+        <div class="card"><h3>🏢 ORGANIZER</h3><p>+ create/edit/publish events &amp; movies, manage slots, analytics.</p></div>
+        <div class="card"><h3>🔑 ADMIN</h3><p>Full access — all resources and organizer features.</p></div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Code Examples</h3>
+      <div class="code-block"><div class="code-header"><span>JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="kw">const</span> res = <span class="kw">await</span> axios.<span class="fn">post</span>(<span class="st">'/api/v1/auth/login'</span>, {
+  email: <span class="st">'john@example.com'</span>, password: <span class="st">'securePass123'</span>
+}, { withCredentials: <span class="kw">true</span> });
+<span class="cm">// Cookie set — all subsequent requests auto-authenticated</span></pre></div>
+      <div class="code-block"><div class="code-header"><span>Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre>s = requests.<span class="fn">Session</span>()
+s.<span class="fn">post</span>(<span class="st">'https://venue-z8ti.onrender.com/api/v1/auth/login'</span>,
+       json={<span class="st">'email'</span>: <span class="st">'john@example.com'</span>, <span class="st">'password'</span>: <span class="st">'securePass123'</span>})
+s.<span class="fn">get</span>(<span class="st">'https://venue-z8ti.onrender.com/api/v1/bookings/my-bookings'</span>)</pre></div>
+    </section>
+
+    <!-- ═══════ ARCHITECTURE ═══════ -->
+    <section id="architecture" class="doc-section">
+      <h2 class="sec-title">System Architecture</h2>
+      <p class="sec-desc">Layered architecture with clear separation of concerns.</p>
+      <div class="arch">
+        <div class="arch-row"><div class="arch-box" style="background:var(--accent-subtle);border-color:rgba(242,140,40,.3);color:var(--accent);">React + Vite Frontend</div></div>
+        <div class="arch-conn">↕</div>
+        <div class="arch-row"><div class="arch-box" style="background:var(--green-subtle);border-color:rgba(34,197,94,.3);color:var(--green);">Nginx Reverse Proxy</div></div>
+        <div class="arch-conn">↕</div>
+        <div class="arch-row">
+          <div class="arch-box" style="background:var(--blue-subtle);border-color:rgba(59,130,246,.3);color:var(--blue);">Express.js API</div>
+          <div class="arch-box" style="background:var(--cyan-subtle);border-color:rgba(6,182,212,.3);color:var(--cyan);">Socket.io Server</div>
+        </div>
+        <div class="arch-conn">↕</div>
+        <div class="arch-row"><div class="arch-box" style="background:var(--accent-subtle);border-color:rgba(242,140,40,.2);color:var(--accent);">Helmet · CORS · Sanitize · RateLimit</div></div>
+        <div class="arch-conn">↕</div>
+        <div class="arch-row">
+          <div class="arch-box" style="background:var(--purple-subtle);border-color:rgba(168,85,247,.3);color:var(--purple);">MongoDB (Txn)</div>
+          <div class="arch-box" style="background:var(--red-subtle);border-color:rgba(239,68,68,.3);color:var(--red);">Redis (Cache)</div>
+          <div class="arch-box" style="background:var(--blue-subtle);border-color:rgba(59,130,246,.3);color:var(--blue);">Cloudinary</div>
+        </div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Request Lifecycle</h3>
+      <div class="flow">
+        <div class="flow-step"><span class="n">1</span>Request</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">2</span>Helmet/CORS</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">3</span>Request ID</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">4</span>Rate Limit</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">5</span>Sanitize</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">6</span>JWT</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">7</span>Cache</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">8</span>Controller</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">9</span>Response</div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Booking Concurrency</h3>
+      <div class="code-block"><div class="code-header"><span>Atomic Seat Reservation</span></div>
+        <pre><span class="cm">// Single atomic op — check + decrement</span>
+<span class="kw">const</span> slot = <span class="kw">await</span> Slot.<span class="fn">findOneAndUpdate</span>(
+  { _id: slotId, availableSeats: { <span class="kw">$gte</span>: quantity } },
+  { <span class="kw">$inc</span>: { availableSeats: -quantity } },
+  { <span class="kw">new</span>: <span class="kw">true</span>, session }
+);
+<span class="cm">// null → auto-waitlist + emit 'waitlist:added'</span></pre></div>
+      <div class="info note"><div class="info-t">No Overselling</div><p>The <code class="inline-code">$gte</code> + <code class="inline-code">$inc</code> execute atomically. MongoDB serializes concurrent ops — 100 users, 10 seats, 0 oversells.</p></div>
+    </section>
+
+    <!-- ═══════ RATE LIMITING ═══════ -->
+    <section id="ratelimit" class="doc-section">
+      <h2 class="sec-title">Rate Limiting</h2>
+      <p class="sec-desc">Six-tier, Redis-backed system with graceful degradation.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Tier</th><th>Name</th><th>Limit</th><th>Window</th><th>Key</th><th>Applies To</th></tr></thead><tbody>
+        <tr><td><span class="badge badge-accent">1</span></td><td><strong>Global Shield</strong></td><td>1,000</td><td>1 hr</td><td>IP</td><td>All auth routes</td></tr>
+        <tr><td><span class="badge badge-delete">2</span></td><td><strong>Auth Brute Force</strong></td><td>10</td><td>15 min</td><td>IP</td><td>/auth/*</td></tr>
+        <tr><td><span class="badge badge-get">3</span></td><td><strong>Scrape Protection</strong></td><td>3,000</td><td>1 hr</td><td>IP</td><td>Public GETs</td></tr>
+        <tr><td><span class="badge badge-post">4</span></td><td><strong>Per-User</strong></td><td>200</td><td>1 hr</td><td>User ID</td><td>Auth routes</td></tr>
+        <tr><td><span class="badge badge-patch">5</span></td><td><strong>Write Throttle</strong></td><td>100</td><td>1 hr</td><td>User ID</td><td>Mutations</td></tr>
+        <tr><td><span class="badge badge-purple">6</span></td><td><strong>Booking Burst</strong></td><td>5</td><td>1 min</td><td>User ID</td><td>Bookings</td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Route Mapping</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Route</th><th>Limiters</th></tr></thead><tbody>
+        <tr><td class="mono">/api/v1/auth</td><td>Auth Brute Force</td></tr>
+        <tr><td class="mono">/api/v1/events</td><td>Scrape → Write</td></tr>
+        <tr><td class="mono">/api/v1/movies</td><td>Scrape → Write</td></tr>
+        <tr><td class="mono">/api/v1/slots</td><td>Scrape → Write</td></tr>
+        <tr><td class="mono">/api/v1/bookings</td><td>Global → JWT → User → Booking</td></tr>
+        <tr><td class="mono">/api/v1/users</td><td>Global → JWT → User → Write</td></tr>
+        <tr><td class="mono">/api/v1/organizer</td><td>Global → JWT → User → Write</td></tr>
+      </tbody></table></div>
+      <div class="info tip"><div class="info-t">Graceful Degradation</div><p>Redis down? Limits silently disabled (<code class="inline-code">passOnStoreError: true</code>). API stays up.</p></div>
+    </section>
+
+    <!-- ═══════ CACHING ═══════ -->
+    <section id="caching" class="doc-section">
+      <h2 class="sec-title">Redis Caching</h2>
+      <p class="sec-desc">Cache-aside on read endpoints. Auto-invalidation on writes. Fail-open.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-v">60s</div><div class="stat-l">Default TTL</div></div>
+        <div class="stat-card"><div class="stat-v">&lt;5ms</div><div class="stat-l">Cache Hit</div></div>
+        <div class="stat-card"><div class="stat-v">Auto</div><div class="stat-l">Invalidation</div></div>
+        <div class="stat-card"><div class="stat-v">Fail-Open</div><div class="stat-l">Degradation</div></div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Flow</h3>
+      <div class="flow">
+        <div class="flow-step"><span class="n">1</span>GET</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">2</span>Redis check</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">3a</span>HIT → return</div>
+      </div>
+      <div class="flow" style="margin-top:6px;">
+        <div class="flow-step"><span class="n">3b</span>MISS → DB</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">4</span>Store (60s)</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">5</span>Return</div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Cached Endpoints</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Endpoint</th><th>TTL</th><th>Key</th></tr></thead><tbody>
+        <tr><td class="mono">GET /api/v1/events</td><td>60s</td><td><code class="inline-code">cache:/api/v1/events</code></td></tr>
+        <tr><td class="mono">GET /api/v1/events/:id</td><td>60s</td><td><code class="inline-code">cache:/api/v1/events/:id</code></td></tr>
+        <tr><td class="mono">GET /api/v1/movies</td><td>60s</td><td><code class="inline-code">cache:/api/v1/movies</code></td></tr>
+        <tr><td class="mono">GET /api/v1/movies/:id</td><td>60s</td><td><code class="inline-code">cache:/api/v1/movies/:id</code></td></tr>
+      </tbody></table></div>
+    </section>
+
+    <!-- ═══════ REAL-TIME ═══════ -->
+    <section id="realtime" class="doc-section">
+      <h2 class="sec-title">Real-Time Events</h2>
+      <p class="sec-desc">Socket.io delivers instant notifications — no polling.</p>
+      <div class="code-block"><div class="code-header"><span>Client Setup</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><span class="kw">import</span> { io } <span class="kw">from</span> <span class="st">'socket.io-client'</span>;
+<span class="kw">const</span> socket = <span class="fn">io</span>(<span class="st">'https://venue-z8ti.onrender.com'</span>, {
+  transports: [<span class="st">'websocket'</span>, <span class="st">'polling'</span>], withCredentials: <span class="kw">true</span>
+});
+socket.<span class="fn">emit</span>(<span class="st">'join'</span>, userId);
+socket.<span class="fn">on</span>(<span class="st">'waitlist:promoted'</span>, (d) =&gt; console.<span class="fn">log</span>(<span class="st">'Seat!'</span>, d.bookingId));</pre></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Events</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Event</th><th>Direction</th><th>Trigger</th><th>Payload</th></tr></thead><tbody>
+        <tr><td class="mono" style="color:var(--cyan)">join</td><td>Client → Server</td><td>After login</td><td><code class="inline-code">userId</code></td></tr>
+        <tr><td class="mono" style="color:var(--yellow)">waitlist:added</td><td>Server → Client</td><td>Slot full</td><td><code class="inline-code">{ slotId, quantity, message }</code></td></tr>
+        <tr><td class="mono" style="color:var(--green)">waitlist:promoted</td><td>Server → Client</td><td>Seat freed</td><td><code class="inline-code">{ slotId, bookingId, quantity, message }</code></td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Waitlist Lifecycle</h3>
+      <div class="flow">
+        <div class="flow-step"><span class="n">1</span>Book full slot</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">2</span>Auto-waitlisted</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">3</span>Someone cancels</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">4</span>First match promoted</div><span class="flow-arr">→</span>
+        <div class="flow-step"><span class="n">5</span>Booking auto-created</div>
+      </div>
+    </section>
+
+    <!-- ═══════ ERRORS ═══════ -->
+    <section id="errors" class="doc-section">
+      <h2 class="sec-title">Error Handling</h2>
+      <p class="sec-desc">Structured responses. Every error includes a <code class="inline-code">requestId</code> for tracing.</p>
+      <div class="code-block"><div class="code-header"><span>Success</span></div>
+        <pre>{ <span class="st">"statusCode"</span>: <span class="nm">200</span>, <span class="st">"status"</span>: <span class="st">"success"</span>, <span class="st">"data"</span>: { ... }, <span class="st">"success"</span>: <span class="kw">true</span> }</pre></div>
+      <div class="code-block"><div class="code-header"><span>Error</span></div>
+        <pre>{ <span class="st">"status"</span>: <span class="st">"fail"</span>, <span class="st">"message"</span>: <span class="st">"..."</span>, <span class="st">"requestId"</span>: <span class="st">"uuid"</span> }</pre></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Status</th><th>Meaning</th><th>Cause</th><th>Fix</th></tr></thead><tbody>
+        <tr><td><span class="badge badge-post">400</span></td><td>Bad Request</td><td>Validation, invalid ID</td><td>Check body/params</td></tr>
+        <tr><td><span class="badge badge-purple">401</span></td><td>Unauthorized</td><td>Missing/expired JWT</td><td>Login again</td></tr>
+        <tr><td><span class="badge badge-delete">403</span></td><td>Forbidden</td><td>Wrong role</td><td>Correct account</td></tr>
+        <tr><td><span class="badge badge-accent">404</span></td><td>Not Found</td><td>Missing resource</td><td>Verify ID</td></tr>
+        <tr><td><span class="badge badge-patch">409</span></td><td>Conflict</td><td>Overlap/duplicate</td><td>Different slot</td></tr>
+        <tr><td><span class="badge badge-cyan">429</span></td><td>Rate Limited</td><td>Too many requests</td><td>Wait for reset</td></tr>
+        <tr><td><span class="badge badge-delete">500</span></td><td>Server Error</td><td>Unhandled</td><td>Retry + requestId</td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Troubleshooting</h3>
+      <button class="collapse-btn" onclick="toggleC(this)"><span>🔑 "401 Unauthorized" after login</span><span class="ic">▼</span></button>
+      <div class="collapse-body"><p style="color:var(--text-secondary);font-size:13px;"><strong>Cause:</strong> JWT expired or cookie not sent.<br/><strong>Fix:</strong> <code class="inline-code">withCredentials: true</code>. Check domain. Login again.</p></div>
+      <button class="collapse-btn" onclick="toggleC(this)"><span>🚫 "403 Forbidden" on organizer routes</span><span class="ic">▼</span></button>
+      <div class="collapse-body"><p style="color:var(--text-secondary);font-size:13px;"><strong>Fix:</strong> Register with <code class="inline-code">"role": "ORGANIZER"</code>.</p></div>
+      <button class="collapse-btn" onclick="toggleC(this)"><span>⏱️ "429 Too Many Requests"</span><span class="ic">▼</span></button>
+      <div class="collapse-body"><p style="color:var(--text-secondary);font-size:13px;">Check <code class="inline-code">RateLimit-Reset</code> header. Wait. Implement backoff.</p></div>
+      <button class="collapse-btn" onclick="toggleC(this)"><span>🪑 "Added to waitlist"</span><span class="ic">▼</span></button>
+      <div class="collapse-body"><p style="color:var(--text-secondary);font-size:13px;">Slot was full. You're FIFO queued. Listen for <code class="inline-code">waitlist:promoted</code> via Socket.io.</p></div>
+    </section>
+
+    <!-- ═══════ SECURITY ═══════ -->
+    <section id="security" class="doc-section">
+      <h2 class="sec-title">Security</h2>
+      <p class="sec-desc">Defense-in-depth: 8 middleware layers on every request.</p>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon" style="background:var(--accent-subtle);color:var(--accent);">🔐</div><h3>Argon2id</h3><p>64 MB, 3 iter, 4 threads — GPU &amp; side-channel resistant.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--green-subtle);color:var(--green);">🛡️</div><h3>Helmet</h3><p>15+ headers: CSP, HSTS, X-Frame, X-Content-Type…</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--blue-subtle);color:var(--blue);">🧹</div><h3>XSS Sanitize</h3><p>Recursive <code class="inline-code">sanitize-html</code> — strips all HTML.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--cyan-subtle);color:var(--cyan);">💉</div><h3>NoSQL Injection</h3><p><code class="inline-code">mongo-sanitize</code> strips $ and . operators.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--accent-subtle);color:var(--accent);">🍪</div><h3>httpOnly Cookies</h3><p>Immune to XSS token theft. Secure + SameSite in prod.</p></div>
+        <div class="card"><div class="card-icon" style="background:var(--purple-subtle);color:var(--purple);">📝</div><h3>Log Redaction</h3><p>Winston redacts password, token, auth, cookie fields.</p></div>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Middleware Stack</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Layer</th><th>Purpose</th></tr></thead><tbody>
+        <tr><td>1</td><td><strong>Helmet</strong></td><td>Security headers</td></tr>
+        <tr><td>2</td><td><strong>Request ID</strong></td><td>UUID v4 tracing</td></tr>
+        <tr><td>3</td><td><strong>Morgan → Winston</strong></td><td>Structured logging + redaction</td></tr>
+        <tr><td>4</td><td><strong>CORS</strong></td><td>Origin whitelist, credentials</td></tr>
+        <tr><td>5</td><td><strong>JSON Parser</strong></td><td>Body parsing</td></tr>
+        <tr><td>6</td><td><strong>Cookie Parser</strong></td><td>httpOnly cookies</td></tr>
+        <tr><td>7</td><td><strong>sanitize-html</strong></td><td>XSS prevention</td></tr>
+        <tr><td>8</td><td><strong>mongo-sanitize</strong></td><td>NoSQL injection</td></tr>
+      </tbody></table></div>
+      <h3 style="font-size:16px;font-weight:700;margin:28px 0 14px;">Upload Limits</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>
+        <tr><td>Storage</td><td>Cloudinary</td></tr>
+        <tr><td>Formats</td><td>jpg, jpeg, png, gif</td></tr>
+        <tr><td>Max Size</td><td>5 MB</td></tr>
+        <tr><td>Validation</td><td>Extension regex + MIME</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         SWAGGER UI — ALWAYS VISIBLE BELOW ALL TAB CONTENT
+         Full interactive API explorer with all endpoints
+    ═══════════════════════════════════════════════════════ -->
+    <hr class="sec-divider" />
+
+    <h2 class="sec-title" id="api-explorer">API Explorer</h2>
+    <p class="sec-desc">Full interactive API reference. All endpoints listed below — click <strong style="color:var(--accent);">"Authorize"</strong> to enter your Bearer token, then <strong style="color:var(--accent);">"Try it out"</strong> on any endpoint to test live.</p>
+
+    <div id="swagger-ui"></div>
+
+  </div>
+
+  <!-- ═══════ FOOTER ═══════ -->
+  <footer class="footer">
+    <div class="container">
+      <p style="margin-bottom:6px;"><strong style="color:var(--text-primary);">Venue API</strong> · v1.0.0 · MIT License</p>
+      <p>Built by <a href="https://github.com/Piyush64-bit" target="_blank">Piyush Soni</a> · <a href="https://github.com/Piyush64-bit/VENUE" target="_blank">GitHub</a> · <a href="https://venueapp.vercel.app" target="_blank">Live Demo</a></p>
+    </div>
+  </footer>
+
+  <!-- ═══════ SCRIPTS ═══════ -->
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script>
+    /* ── Tab Navigation ── */
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.doc-section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        const t = document.getElementById(tab.dataset.tab);
+        if (t) t.classList.add('active');
+      });
+    });
+
+    /* ── Swagger UI — initialized on page load, always visible ── */
+    window.onload = function () {
+      SwaggerUIBundle({
+        url: window.location.origin + '/docs/swagger.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: 'BaseLayout',
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+        docExpansion: 'list',
+        filter: true,
+        tryItOutEnabled: true,
+        persistAuthorization: true,
+        displayRequestDuration: true,
+      });
+    };
+
+    /* ── Copy ── */
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre');
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    /* ── Collapse ── */
+    function toggleC(el) {
+      el.classList.toggle('open');
+      el.nextElementSibling.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
