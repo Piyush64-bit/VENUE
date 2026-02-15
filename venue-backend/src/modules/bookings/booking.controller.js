@@ -12,8 +12,14 @@ const ApiResponse = require('../../utils/ApiResponse');
  * BOOK SLOT (Quantity-based)
  */
 const bookSlot = catchAsync(async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // Skip transactions in test environment (standalone MongoDB)
+  const useTransactions = process.env.NODE_ENV !== 'test';
+  let session = null;
+  
+  if (useTransactions) {
+    session = await mongoose.startSession();
+    session.startTransaction();
+  }
 
   try {
     const { slotId, quantity = 1, seats } = req.body;
@@ -35,7 +41,8 @@ const bookSlot = catchAsync(async (req, res, next) => {
 
     // 1. Fetch Slot with Parent for Validation
     // We need to check if the parent (Event/Movie) is PUBLISHED.
-    const slotCheck = await Slot.findById(slotId).session(session);
+    const slotCheckQuery = Slot.findById(slotId);
+    const slotCheck = useTransactions ? await slotCheckQuery.session(session) : await slotCheckQuery;
 
     if (!slotCheck) {
       throw new AppError("Slot not found", 404);
@@ -55,18 +62,12 @@ const bookSlot = catchAsync(async (req, res, next) => {
 
     // 2. Prevent duplicate booking (User Logic) - REMOVED
     // We want to allow users to book multiple times if they wish (e.g. buying more tickets later)
-    // const existingBooking = await Booking.findOne({
-    //   userId,
-    //   slotId,
-    //   status: "CONFIRMED",
-    // }).session(session);
-
-    // if (existingBooking) {
-    //   throw new AppError("You have already booked this slot", 400);
-    // }
 
     // 3. Atomic capacity check + decrement
     // Use availableSeats instead of remainingCapacity
+    const slotUpdateOptions = { new: true };
+    if (useTransactions) slotUpdateOptions.session = session;
+    
     const slot = await Slot.findOneAndUpdate(
       {
         _id: slotId,
@@ -75,25 +76,29 @@ const bookSlot = catchAsync(async (req, res, next) => {
       {
         $inc: { availableSeats: -quantity },
       },
-      { new: true, session }
+      slotUpdateOptions
     );
 
     // 4. Slot full? -> Add to Waitlist
     if (!slot) {
-      const alreadyWaitlisted = await Waitlist.findOne({
+      const waitlistQuery = Waitlist.findOne({
         slotId,
         "users.userId": userId,
-      }).session(session);
+      });
+      const alreadyWaitlisted = useTransactions ? await waitlistQuery.session(session) : await waitlistQuery;
 
       if (!alreadyWaitlisted) {
+        const waitlistOptions = { upsert: true };
+        if (useTransactions) waitlistOptions.session = session;
+        
         await Waitlist.findOneAndUpdate(
           { slotId },
           { $push: { users: { userId, quantity } } },
-          { upsert: true, session }
+          waitlistOptions
         );
       }
 
-      await session.commitTransaction();
+      if (useTransactions) await session.commitTransaction();
 
       // Socket event
       const io = req.app.get("io");
@@ -113,11 +118,13 @@ const bookSlot = catchAsync(async (req, res, next) => {
     // 5. Update Slot Status if needed
     if (slot.availableSeats === 0) {
       slot.status = "FULL";
-      await slot.save({ session });
+      const saveOptions = {};
+      if (useTransactions) saveOptions.session = session;
+      await slot.save(saveOptions);
     }
 
     // 6. Create Booking
-    const [booking] = await Booking.create([{
+    const bookingData = {
       userId,
       slotId,
       quantity,
@@ -125,16 +132,20 @@ const bookSlot = catchAsync(async (req, res, next) => {
       status: "CONFIRMED",
       paymentId: `PAY_${Date.now()}`,
       transactionId: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`
-    }], { session });
+    };
 
-    await session.commitTransaction();
+    let booking;
+    if (useTransactions) {
+      const [createdBooking] = await Booking.create([bookingData], { session });
+      booking = createdBooking;
+    } else {
+      booking = await Booking.create(bookingData);
+    }
+
+    if (useTransactions) await session.commitTransaction();
 
     // Send Email Asynchronously (don't block response)
     // TODO: Implement email service
-    // const user = await User.findById(userId);
-    // emailService.sendBookingConfirmation(user, booking[0], slot, parent).catch(err => {
-    //   logger.error("Failed to send email", { error: err.message, requestId: req.id });
-    // });
 
     // Populate the booking before sending response
     await booking.populate({
@@ -149,12 +160,14 @@ const bookSlot = catchAsync(async (req, res, next) => {
     res.status(201).json(new ApiResponse(201, booking, 'Booking created successfully'));
 
   } catch (error) {
-    if (session.inTransaction()) {
+    if (useTransactions && session && session.inTransaction()) {
       await session.abortTransaction();
     }
     throw error;
   } finally {
-    session.endSession();
+    if (useTransactions && session) {
+      session.endSession();
+    }
   }
 });
 
@@ -181,7 +194,7 @@ const getBookingById = catchAsync(async (req, res, next) => {
   }
 
   // Authorization check: Ensure user owns this booking
-  if (booking.userId.toString() !== req.user.userId) {
+  if (booking.userId.toString() !== req.user._id.toString()) {
     throw new AppError('Not authorized to view this booking', 403);
   }
 
@@ -192,42 +205,61 @@ const getBookingById = catchAsync(async (req, res, next) => {
  * CANCEL BOOKING + PROMOTE WAITLIST
  */
 const cancelBooking = catchAsync(async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // Skip transactions in test environment (standalone MongoDB)
+  const useTransactions = process.env.NODE_ENV !== 'test';
+  let session = null;
+  
+  if (useTransactions) {
+    session = await mongoose.startSession();
+    session.startTransaction();
+  }
 
   try {
     const bookingId = req.params.id;
     const userId = req.user._id;
 
     // 1. Find booking
-    const booking = await Booking.findOne({
+    const bookingQuery = Booking.findOne({
       _id: bookingId,
-      userId,
       status: "CONFIRMED",
-    }).session(session);
+    });
+    const booking = useTransactions ? await bookingQuery.session(session) : await bookingQuery;
 
     if (!booking) {
       throw new AppError("Booking not found or already cancelled", 404);
     }
 
+    // Check authorization
+    if (booking.userId.toString() !== userId.toString()) {
+      throw new AppError("Not authorized to cancel this booking", 403);
+    }
+
     // 2. Cancel booking
     booking.status = "CANCELLED";
-    await booking.save({ session });
+    const saveOptions = {};
+    if (useTransactions) saveOptions.session = session;
+    await booking.save(saveOptions);
 
     // 3. Restore capacity
+    const slotUpdateOptions = { new: true };
+    if (useTransactions) slotUpdateOptions.session = session;
+    
     const slot = await Slot.findByIdAndUpdate(
       booking.slotId,
       { $inc: { availableSeats: booking.quantity } },
-      { new: true, session }
+      slotUpdateOptions
     );
 
     if (slot.availableSeats > 0) {
       slot.status = "AVAILABLE";
-      await slot.save({ session });
+      const slotSaveOptions = {};
+      if (useTransactions) slotSaveOptions.session = session;
+      await slot.save(slotSaveOptions);
     }
 
     // 4. Promote from waitlist if possible
-    const waitlist = await Waitlist.findOne({ slotId: slot._id }).session(session);
+    const waitlistQuery = Waitlist.findOne({ slotId: slot._id });
+    const waitlist = useTransactions ? await waitlistQuery.session(session) : await waitlistQuery;
 
     let promotedBooking = null;
     let nextUser = null;
@@ -241,44 +273,58 @@ const cancelBooking = catchAsync(async (req, res, next) => {
         nextUser = waitlist.users[userIndex];
 
         // Deduct capacity again
+        const updatedSlotOptions = { new: true };
+        if (useTransactions) updatedSlotOptions.session = session;
+        
         const updatedSlot = await Slot.findOneAndUpdate(
           { _id: slot._id, availableSeats: { $gte: nextUser.quantity } },
           { $inc: { availableSeats: -nextUser.quantity } },
-          { new: true, session }
+          updatedSlotOptions
         );
 
         if (updatedSlot) {
           // Create Booking for promoted user
-          const [newBooking] = await Booking.create([{
+          const bookingData = {
             userId: nextUser.userId,
             slotId: slot._id,
             quantity: nextUser.quantity,
             status: "CONFIRMED",
             paymentId: `PAY_WL_${Date.now()}`,
             transactionId: `TXN_WL_${Date.now()}`
-          }], { session });
+          };
 
-          promotedBooking = newBooking;
+          if (useTransactions) {
+            const [newBooking] = await Booking.create([bookingData], { session });
+            promotedBooking = newBooking;
+          } else {
+            promotedBooking = await Booking.create(bookingData);
+          }
 
           // Update Slot status
           if (updatedSlot.availableSeats === 0) {
             updatedSlot.status = "FULL";
-            await updatedSlot.save({ session });
+            const statusSaveOptions = {};
+            if (useTransactions) statusSaveOptions.session = session;
+            await updatedSlot.save(statusSaveOptions);
           }
 
           // Remove the specific user from waitlist
           waitlist.users.splice(userIndex, 1);
 
           if (waitlist.users.length === 0) {
-            await Waitlist.deleteOne({ _id: waitlist._id }).session(session);
+            const deleteOptions = {};
+            if (useTransactions) deleteOptions.session = session;
+            await Waitlist.deleteOne({ _id: waitlist._id }, deleteOptions);
           } else {
-            await waitlist.save({ session });
+            const waitlistSaveOptions = {};
+            if (useTransactions) waitlistSaveOptions.session = session;
+            await waitlist.save(waitlistSaveOptions);
           }
         }
       }
     }
 
-    await session.commitTransaction();
+    if (useTransactions) await session.commitTransaction();
 
     // Socket events
     const io = req.app.get("io");
@@ -303,12 +349,14 @@ const cancelBooking = catchAsync(async (req, res, next) => {
     });
 
   } catch (error) {
-    if (session.inTransaction()) {
+    if (useTransactions && session && session.inTransaction()) {
       await session.abortTransaction();
     }
     throw error;
   } finally {
-    session.endSession();
+    if (useTransactions && session) {
+      session.endSession();
+    }
   }
 });
 

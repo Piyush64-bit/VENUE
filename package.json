@@ -1,0 +1,60 @@
+{
+  "name": "venue-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VENUE: Event & Movie Booking Platform - Production-grade full-stack booking system",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Piyush64-bit/VENUE"
+  },
+  "keywords": [
+    "booking-system",
+    "event-management",
+    "real-time",
+    "mongodb-transactions",
+    "react",
+    "nodejs",
+    "express",
+    "socket-io",
+    "concurrency-control",
+    "distributed-systems"
+  ],
+  "author": "PIYUSH SONI",
+  "license": "MIT",
+  "scripts": {
+    "install:all": "npm install && cd venue-backend && npm install && cd ../venue-frontend && npm install",
+    "dev:backend": "cd venue-backend && npm run dev",
+    "dev:frontend": "cd venue-frontend && npm run dev",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "test:backend": "cd venue-backend && npm test",
+    "test:frontend": "cd venue-frontend && npm test",
+    "test:all": "npm run test:backend && npm run test:frontend",
+    "test:ci": "npm run test:backend -- --ci && npm run test:frontend -- --ci",
+    "build:backend": "cd venue-backend && echo 'Backend uses Node.js directly, no build needed'",
+    "build:frontend": "cd venue-frontend && npm run build",
+    "build:all": "npm run build:backend && npm run build:frontend",
+    "lint:backend": "cd venue-backend && npm run lint || echo 'Add lint script to backend'",
+    "lint:frontend": "cd venue-frontend && npm run lint",
+    "lint:all": "npm run lint:backend && npm run lint:frontend",
+    "docker:up": "docker-compose up",
+    "docker:up:build": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:prod": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "k6:all": "cd venue-backend && npm run k6:load && npm run k6:booking && npm run k6:rate-limit",
+    "ci:validate": "docker-compose config && npm run lint:all",
+    "release:patch": "npm version patch && git push origin main --tags",
+    "release:minor": "npm version minor && git push origin main --tags",
+    "release:major": "npm version major && git push origin main --tags",
+    "prepare": "node -e \"try { require('husky').install() } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e }\" || echo 'Husky not installed, skipping git hooks setup'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
