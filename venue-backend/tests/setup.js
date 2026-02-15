@@ -2,8 +2,27 @@ const mongoose = require('mongoose');
 const redisService = require('../src/services/redis.service');
 const logger = require('../src/config/logger');
 
-// Load test environment variables
-require('dotenv').config({ path: '.env.test' });
+// Load test environment variables - try .env.test first, fall back to process.env
+try {
+  require('dotenv').config({ path: '.env.test' });
+} catch (error) {
+  // If .env.test doesn't exist, that's okay - use environment variables
+  logger.debug('.env.test not found, using process.env');
+}
+
+// Ensure required environment variables are set
+if (!process.env.MONGO_URI) {
+  process.env.MONGO_URI = 'mongodb://localhost:27017/venue_test';
+}
+if (!process.env.REDIS_URL) {
+  process.env.REDIS_URL = 'redis://localhost:6379';
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test_secret_key';
+}
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'test';
+}
 
 // Suppress console logs during tests (optional)
 // global.console = {
