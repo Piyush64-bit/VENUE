@@ -25,8 +25,8 @@ const sanitizeMiddleware = require("./middlewares/sanitize.middleware");
 const globalErrorHandler = require("./middlewares/globalErrorHandler");
 const AppError = require("./utils/AppError");
 
-const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
+const path = require("path");
 
 const app = express();
 
@@ -34,7 +34,20 @@ const app = express();
    SECURITY & CORE MIDDLEWARE
 ====================================================== */
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+      },
+    },
+  })
+);
 app.use(requestIdMiddleware);
 
 // Configure Morgan to use Winston
@@ -171,7 +184,21 @@ app.use("/api/v1", apiV1);
    DOCUMENTATION
 ====================================================== */
 
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Serve static assets (logo, etc.) from docs folder
+app.use("/docs", express.static(path.join(__dirname, "docs"), {
+  index: false, // Don't serve index.html — we handle /docs ourselves
+}));
+
+// Serve the Swagger JSON spec for the API Explorer tab
+app.get("/docs/swagger.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
+
+// Serve custom documentation page
+app.get("/docs", (req, res) => {
+  res.sendFile(path.join(__dirname, "docs", "custom-swagger.html"));
+});
 
 /* ======================================================
    ROOT ROUTE
