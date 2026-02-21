@@ -24,7 +24,7 @@ jobs:
         ports:
           - 27017:27017
         options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand({ping: 1})'"
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1}).ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -53,6 +53,34 @@ jobs:
     - name: Install backend dependencies
       working-directory: ./venue-backend
       run: npm ci
+
+    - name: Create test environment file
+      working-directory: ./venue-backend
+      run: |
+        cat > .env.test << EOF
+        NODE_ENV=test
+        MONGO_URI=mongodb://localhost:27017/venue_test
+        REDIS_URL=redis://localhost:6379
+        JWT_SECRET=test_secret_key_for_ci
+        JWT_EXPIRE=30d
+        LOG_LEVEL=error
+        EOF
+
+    - name: Wait for databases to be ready
+      run: |
+        echo "Waiting for MongoDB..."
+        until nc -z localhost 27017; do
+          echo "MongoDB not ready, waiting..."
+          sleep 2
+        done
+        echo "✅ MongoDB is ready"
+        
+        echo "Waiting for Redis..."
+        until nc -z localhost 6379; do
+          echo "Redis not ready, waiting..."
+          sleep 2
+        done
+        echo "✅ Redis is ready"
 
     - name: Run backend linting
       working-directory: ./venue-backend
@@ -97,14 +125,9 @@ jobs:
         JWT_EXPIRE: 30d
         LOG_LEVEL: error
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./venue-backend/coverage/lcov.info
-        flags: backend
-        name: backend-coverage
-        fail_ci_if_error: true
+    # Coverage upload disabled - enable when Codecov is configured
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v4
 
     - name: Archive test results
       if: always()
@@ -146,15 +169,16 @@ jobs:
       working-directory: ./venue-frontend
       run: npm run test -- --run --coverage
 
-    - name: Upload frontend coverage
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./venue-frontend/coverage/lcov.info
-        flags: frontend
-        name: frontend-coverage
-        fail_ci_if_error: false
-      continue-on-error: true
+    # Coverage upload disabled - enable when Codecov is configured
+    # - name: Upload frontend coverage
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     files: ./venue-frontend/coverage/lcov.info
+    #     flags: frontend
+    #     name: frontend-coverage
+    #     fail_ci_if_error: false
+    #   continue-on-error: true
 
     - name: Build frontend production bundle
       working-directory: ./venue-frontend
