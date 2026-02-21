@@ -48,8 +48,9 @@ describe('Slot Integration Tests', () => {
       title: 'Test Movie',
       description: 'A test movie',
       releaseDate: new Date('2026-03-01'),
-      runtime: 120,
-      genre: ['Action'],
+      runtime: '120',
+      genre: 'Action',
+      organizer: organizer._id,
       isPublished: true,
     });
     movieId = movie._id;
@@ -205,15 +206,12 @@ describe('Slot Integration Tests', () => {
     });
 
     it('should handle different seat label formats', async () => {
-      // Create booking with object format seats
+      // Create booking with string format seats
       await Booking.create({
         userId: (await createTestUser({ email: 'booker@test.com' }))._id,
         slotId: eventSlotId,
         quantity: 2,
-        seats: [
-          { label: 'C1', row: 'C', number: 1 },
-          { label: 'C2', row: 'C', number: 2 },
-        ],
+        seats: ['C1', 'C2'],
         status: 'CONFIRMED',
       });
 

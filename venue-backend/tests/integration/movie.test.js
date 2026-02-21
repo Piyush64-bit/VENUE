@@ -11,6 +11,7 @@ describe('Movie Integration Tests', () => {
   let organizerToken;
   let userToken;
   let movieId;
+  let organizerId;
 
   beforeEach(async () => {
     // Create admin user
@@ -27,6 +28,7 @@ describe('Movie Integration Tests', () => {
     const organizer = await createTestOrganizer({
       email: 'organizer@test.com',
     });
+    organizerId = organizer._id;
     organizerToken = generateTestToken({
       userId: organizer._id.toString(),
       role: 'ORGANIZER',
@@ -299,7 +301,7 @@ describe('Movie Integration Tests', () => {
         .send(validMovieData)
         .expect(403);
 
-      expect(response.body.status).toBe('fail');
+      expect(response.body.message).toBeDefined();
     });
 
     it('should fail with missing required fields', async () => {

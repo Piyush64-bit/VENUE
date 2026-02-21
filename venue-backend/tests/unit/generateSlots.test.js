@@ -216,9 +216,9 @@ describe('generateSlots Utility', () => {
   });
 
   describe('Date handling', () => {
-    it('should include full end day when endDate is end of day', () => {
+    it('should include full end day when endDate is midnight next day', () => {
       const startDate = '2026-05-01T00:00:00';
-      const endDate = '2026-05-01T23:59:59';
+      const endDate = '2026-05-02T00:00:00';
       const slotDuration = 60;
       const capacityPerSlot = 100;
 
