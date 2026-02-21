@@ -1,6 +1,14 @@
 const globalErrorHandler = require('../../src/middlewares/globalErrorHandler');
 const AppError = require('../../src/utils/AppError');
 
+// Mock the logger to prevent console output during tests
+jest.mock('../../src/config/logger', () => ({
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}));
+
 describe('Global Error Handler Middleware', () => {
   let req, res, next;
 

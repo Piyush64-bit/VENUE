@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 const redisService = require('../src/services/redis.service');
+
+// Mock logger globally to prevent console output during tests
+jest.mock('../src/config/logger', () => ({
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}));
+
 const logger = require('../src/config/logger');
 
 // Load test environment variables - try .env.test first, fall back to process.env
