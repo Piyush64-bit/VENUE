@@ -382,11 +382,16 @@ const getMyBookings = catchAsync(async (req, res, next) => {
 const getOrganizerBookings = catchAsync(async (req, res, next) => {
   const organizerId = req.user._id;
 
-  // 1. Find all events by this organizer
-  const events = await Event.find({ organizerId }).select('_id title');
+  // 1. Find all events and movies by this organizer
+  const [events, movies] = await Promise.all([
+    Event.find({ organizerId }).select('_id title'),
+    require('../movies/movie.model').find({ organizer: organizerId }).select('_id title')
+  ]);
   const eventIds = events.map(event => event._id);
+  const movieIds = movies.map(movie => movie._id);
+  const allParentIds = [...eventIds, ...movieIds];
 
-  if (eventIds.length === 0) {
+  if (allParentIds.length === 0) {
     return res.status(200).json({
       status: 'success',
       results: 0,
@@ -394,8 +399,8 @@ const getOrganizerBookings = catchAsync(async (req, res, next) => {
     });
   }
 
-  // 2. Find all slots for these events
-  const slots = await Slot.find({ eventId: { $in: eventIds } }).select('_id eventId startTime endTime date');
+  // 2. Find all slots for these parents
+  const slots = await Slot.find({ parentId: { $in: allParentIds } }).select('_id parentId parentType startTime endTime date');
   const slotIds = slots.map(slot => slot._id);
 
   // 3. Find all bookings for these slots
@@ -403,9 +408,9 @@ const getOrganizerBookings = catchAsync(async (req, res, next) => {
     .populate('userId', 'name email') // Get user info
     .populate({
       path: 'slotId',
-      select: 'startTime endTime date eventId',
+      select: 'startTime endTime date parentId parentType',
       populate: {
-        path: 'eventId',
+        path: 'parentId',
         select: 'title'
       }
     })

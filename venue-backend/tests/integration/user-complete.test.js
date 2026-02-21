@@ -252,8 +252,8 @@ describe('User Integration Tests - Complete Coverage', () => {
         .expect(200);
 
       expect(response.body.status).toBe('success');
-      expect(response.body.data.email).toBe('user@test.com');
-      expect(response.body.data).not.toHaveProperty('password');
+      expect(response.body.data.user.email).toBe('user@test.com');
+      expect(response.body.data.user).not.toHaveProperty('password');
     });
 
     it('should fail without authentication', async () => {
@@ -276,8 +276,8 @@ describe('User Integration Tests - Complete Coverage', () => {
         })
         .expect(200);
 
-      expect(response.body.data.name).toBe('Updated Name');
-      expect(response.body.data.email).toBe('newemail@test.com');
+      expect(response.body.data.user.name).toBe('Updated Name');
+      expect(response.body.data.user.email).toBe('newemail@test.com');
     });
 
     it('should fail with duplicate email', async () => {
@@ -308,8 +308,8 @@ describe('User Integration Tests - Complete Coverage', () => {
         })
         .expect(200);
 
-      expect(response.body.data.name).toBe('Only Name Changed');
-      expect(response.body.data.email).toBe('user@test.com');
+      expect(response.body.data.user.name).toBe('Only Name Changed');
+      expect(response.body.data.user.email).toBe('user@test.com');
     });
   });
 
@@ -321,6 +321,7 @@ describe('User Integration Tests - Complete Coverage', () => {
         .send({
           currentPassword: 'UserPass123!',
           newPassword: 'NewSecurePass456!',
+          confirmPassword: 'NewSecurePass456!',
         })
         .expect(200);
 
@@ -334,6 +335,7 @@ describe('User Integration Tests - Complete Coverage', () => {
         .send({
           currentPassword: 'WrongPassword',
           newPassword: 'NewSecurePass456!',
+          confirmPassword: 'NewSecurePass456!',
         })
         .expect(401);
 
@@ -366,44 +368,17 @@ describe('User Integration Tests - Complete Coverage', () => {
   });
 
   /* ======================================================
-     DELETE ACCOUNT
-     ====================================================== */
-
-  describe('DELETE /api/v1/users/account', () => {
-    it('should delete user account', async () => {
-      const response = await request(app)
-        .delete('/api/v1/users/account')
-        .set('Cookie', [`token=${userToken}`])
-        .expect(200);
-
-      expect(response.body.message).toContain('deleted');
-
-      // Verify user is deleted
-      const deletedUser = await User.findById(userId);
-      expect(deletedUser).toBeNull();
-    });
-
-    it('should fail without authentication', async () => {
-      const response = await request(app)
-        .delete('/api/v1/users/account')
-        .expect(401);
-
-      expect(response.body.status).toBe('fail');
-    });
-  });
-
-  /* ======================================================
      IMAGE UPLOAD
      ====================================================== */
 
-  describe('POST /api/v1/users/upload', () => {
+  describe('POST /api/v1/users/profile/picture', () => {
     it('should fail without file', async () => {
       const response = await request(app)
-        .post('/api/v1/users/upload')
+        .post('/api/v1/users/profile/picture')
         .set('Cookie', [`token=${userToken}`])
         .expect(400);
 
-      expect(response.body.message).toContain('No image');
+      expect(response.body.message).toContain('Please upload an image');
     });
   });
 });

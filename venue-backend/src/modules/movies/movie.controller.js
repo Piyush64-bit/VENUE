@@ -7,8 +7,13 @@ const ApiResponse = require('../../utils/ApiResponse');
 const redisService = require('../../services/redis.service');
 
 const createMovie = catchAsync(async (req, res, next) => {
-    const session = await Movie.startSession();
-    session.startTransaction();
+    const useTransactions = process.env.NODE_ENV !== 'test';
+    let session = null;
+
+    if (useTransactions) {
+        session = await Movie.startSession();
+        session.startTransaction();
+    }
 
     try {
         const {
@@ -25,15 +30,24 @@ const createMovie = catchAsync(async (req, res, next) => {
             capacityPerSlot = 100
         } = req.body;
 
-        // 1. Create Movie
-        const movie = await Movie.create([{
+        const movieData = {
             title,
             description,
             releaseDate,
             runtime,
             poster,
-            genre
-        }], { session });
+            genre,
+            organizer: req.user._id
+        };
+
+        // 1. Create Movie
+        let movie;
+        if (useTransactions) {
+            const [created] = await Movie.create([movieData], { session });
+            movie = created;
+        } else {
+            movie = await Movie.create(movieData);
+        }
 
         let createdSlots = [];
 
@@ -51,28 +65,38 @@ const createMovie = catchAsync(async (req, res, next) => {
                 capacityPerSlot
             );
 
-            // Attach movieId
+            // Attach parent references with correct Slot schema fields
             const slotsWithMovie = slots.map(slot => ({
                 ...slot,
-                movieId: movie[0]._id,
-                // eventId is undefined, which is allowed by our new schema
+                parentType: 'Movie',
+                parentId: movie._id,
+                capacity: slot.remainingCapacity,
+                availableSeats: slot.remainingCapacity,
             }));
 
-            createdSlots = await Slot.insertMany(slotsWithMovie, { session });
+            if (useTransactions) {
+                createdSlots = await Slot.insertMany(slotsWithMovie, { session });
+            } else {
+                createdSlots = await Slot.insertMany(slotsWithMovie);
+            }
         }
 
-        await session.commitTransaction();
+        if (useTransactions) await session.commitTransaction();
         await redisService.clearCache('movies:*');
 
         return res.status(201).json(
-            new ApiResponse(201, { movie: movie[0], slots: createdSlots }, "Movie created and slots generated successfully")
+            new ApiResponse(201, { movie, slots: createdSlots }, "Movie created and slots generated successfully")
         );
 
     } catch (error) {
-        await session.abortTransaction();
+        if (useTransactions && session) {
+            await session.abortTransaction();
+        }
         throw error;
     } finally {
-        session.endSession();
+        if (useTransactions && session) {
+            session.endSession();
+        }
     }
 });
 

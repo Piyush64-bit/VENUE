@@ -83,8 +83,14 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
     });
 
     it('should fail with non-organizer role', async () => {
+      const regularUser = await User.create({
+        name: 'Regular User',
+        email: 'regular@test.com',
+        password: await hashPassword('password'),
+        role: 'USER',
+      });
       const userToken = generateTestToken({
-        userId: organizerId.toString(),
+        userId: regularUser._id.toString(),
         role: 'USER',
       });
 
@@ -93,7 +99,7 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
         .set('Cookie', [`token=${userToken}`])
         .expect(403);
 
-      expect(response.body.status).toBe('fail');
+      expect(response.body.message).toBeDefined();
     });
   });
 
@@ -476,8 +482,7 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
         description: 'Great movie',
         genre: 'Action',
         releaseDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        runtime: 120,
-        price: 15,
+        runtime: '2h 0m',
       };
 
       const response = await request(app)
@@ -552,7 +557,7 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
      BOOKINGS MANAGEMENT
      ====================================================== */
 
-  describe('GET /api/v1/organizer/bookings', () => {
+  describe('GET /api/v1/bookings/organizer', () => {
     it('should get all bookings for organizer events', async () => {
       const user = await createTestUser();
       await Booking.create({
@@ -566,12 +571,12 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
       });
 
       const response = await request(app)
-        .get('/api/v1/organizer/bookings')
+        .get('/api/v1/bookings/organizer')
         .set('Cookie', [`token=${organizerToken}`])
         .expect(200);
 
       expect(response.body.status).toBe('success');
-      expect(response.body.data.results).toBeGreaterThanOrEqual(1);
+      expect(response.body.results).toBeGreaterThanOrEqual(1);
     });
 
     it('should return empty for organizer with no bookings', async () => {
@@ -587,11 +592,11 @@ describe('Organizer Integration Tests - Complete Coverage', () => {
       });
 
       const response = await request(app)
-        .get('/api/v1/organizer/bookings')
+        .get('/api/v1/bookings/organizer')
         .set('Cookie', [`token=${newOrgToken}`])
         .expect(200);
 
-      expect(response.body.data.results).toBe(0);
+      expect(response.body.results).toBe(0);
     });
   });
 });

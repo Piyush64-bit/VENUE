@@ -13,13 +13,13 @@ describe('Utils - ApiResponse, AppError, catchAsync', () => {
       expect(response.message).toBe('Success');
     });
 
-    it('should create success response without message', () => {
+    it('should create success response without message (uses default)', () => {
       const response = new ApiResponse(201, { id: 123 });
       
       expect(response.status).toBe('success');
       expect(response.statusCode).toBe(201);
       expect(response.data).toEqual({ id: 123 });
-      expect(response.message).toBeUndefined();
+      expect(response.message).toBe('Success');
     });
 
     it('should handle null data', () => {

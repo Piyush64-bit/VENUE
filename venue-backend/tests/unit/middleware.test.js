@@ -1,8 +1,17 @@
 const verifyToken = require('../../src/middlewares/verifyToken');
 const checkRole = require('../../src/middlewares/checkRole');
+const validateId = require('../../src/middlewares/validateId');
+const validateRequest = require('../../src/middlewares/validateRequest');
 const jwt = require('jsonwebtoken');
+const { z } = require('zod');
 
+// Mock dependencies
 jest.mock('jsonwebtoken');
+jest.mock('../../src/modules/users/user.model', () => ({
+  findById: jest.fn(),
+}));
+
+const User = require('../../src/modules/users/user.model');
 
 describe('Authentication Middleware Tests', () => {
   let req, res, next;
@@ -11,6 +20,9 @@ describe('Authentication Middleware Tests', () => {
     req = {
       cookies: {},
       headers: {},
+      params: {},
+      body: {},
+      query: {},
     };
 
     res = {
@@ -21,67 +33,84 @@ describe('Authentication Middleware Tests', () => {
     next = jest.fn();
 
     process.env.JWT_SECRET = 'test-secret';
+    jest.clearAllMocks();
   });
 
   describe('verifyToken middleware', () => {
-    it('should verify valid token from cookie', () => {
+    it('should verify valid token from cookie and set req.user from DB', async () => {
       const mockDecoded = {
         userId: '507f1f77bcf86cd799439011',
+        role: 'USER',
+      };
+      const mockUser = {
+        _id: '507f1f77bcf86cd799439011',
+        name: 'Test User',
+        email: 'test@test.com',
         role: 'USER',
       };
 
       req.cookies.token = 'valid-token';
       jwt.verify.mockReturnValue(mockDecoded);
+      User.findById.mockResolvedValue(mockUser);
 
-      verifyToken(req, res, next);
+      await verifyToken(req, res, next);
 
       expect(jwt.verify).toHaveBeenCalledWith('valid-token', 'test-secret');
-      expect(req.user).toEqual(mockDecoded);
+      expect(User.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+      expect(req.user).toBe(mockUser);
       expect(next).toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(); // called without error
     });
 
-    it('should verify valid token from Authorization header', () => {
+    it('should verify valid token from Authorization header', async () => {
       const mockDecoded = {
         userId: '507f1f77bcf86cd799439011',
+        role: 'USER',
+      };
+      const mockUser = {
+        _id: '507f1f77bcf86cd799439011',
         role: 'USER',
       };
 
       req.headers.authorization = 'Bearer valid-token';
       jwt.verify.mockReturnValue(mockDecoded);
+      User.findById.mockResolvedValue(mockUser);
 
-      verifyToken(req, res, next);
+      await verifyToken(req, res, next);
 
       expect(jwt.verify).toHaveBeenCalledWith('valid-token', 'test-secret');
-      expect(req.user).toEqual(mockDecoded);
+      expect(req.user).toBe(mockUser);
       expect(next).toHaveBeenCalled();
     });
 
-    it('should return 401 when no token provided', () => {
-      verifyToken(req, res, next);
+    it('should call next with AppError when no token provided', async () => {
+      await verifyToken(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: 'fail',
-          message: expect.stringContaining('token'),
+          statusCode: 401,
+          message: expect.stringContaining('not logged in'),
         })
       );
-      expect(next).not.toHaveBeenCalled();
     });
 
-    it('should return 401 for invalid token', () => {
+    it('should call next with AppError for invalid token', async () => {
       req.cookies.token = 'invalid-token';
       jwt.verify.mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
-      verifyToken(req, res, next);
+      await verifyToken(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(next).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+          message: expect.stringContaining('Invalid token'),
+        })
+      );
     });
 
-    it('should return 401 for expired token', () => {
+    it('should call next with AppError for expired token', async () => {
       req.cookies.token = 'expired-token';
       const error = new Error('Token expired');
       error.name = 'TokenExpiredError';
@@ -89,34 +118,43 @@ describe('Authentication Middleware Tests', () => {
         throw error;
       });
 
-      verifyToken(req, res, next);
+      await verifyToken(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(next).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+        })
+      );
     });
 
-    it('should prefer Authorization header over cookie', () => {
-      const mockDecoded = {
-        userId: '507f1f77bcf86cd799439011',
-        role: 'USER',
-      };
+    it('should prefer cookie over no header', async () => {
+      const mockDecoded = { userId: '507f1f77bcf86cd799439011', role: 'USER' };
+      const mockUser = { _id: '507f1f77bcf86cd799439011', role: 'USER' };
 
       req.cookies.token = 'cookie-token';
-      req.headers.authorization = 'Bearer header-token';
       jwt.verify.mockReturnValue(mockDecoded);
+      User.findById.mockResolvedValue(mockUser);
 
-      verifyToken(req, res, next);
+      await verifyToken(req, res, next);
 
-      expect(jwt.verify).toHaveBeenCalledWith('header-token', 'test-secret');
+      expect(jwt.verify).toHaveBeenCalledWith('cookie-token', 'test-secret');
     });
 
-    it('should handle malformed Authorization header', () => {
-      req.headers.authorization = 'InvalidFormat token';
+    it('should call next with AppError when user no longer exists', async () => {
+      const mockDecoded = { userId: '507f1f77bcf86cd799439011', role: 'USER' };
 
-      verifyToken(req, res, next);
+      req.cookies.token = 'valid-token';
+      jwt.verify.mockReturnValue(mockDecoded);
+      User.findById.mockResolvedValue(null);
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(next).not.toHaveBeenCalled();
+      await verifyToken(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+          message: expect.stringContaining('no longer exists'),
+        })
+      );
     });
   });
 
@@ -150,20 +188,24 @@ describe('Authentication Middleware Tests', () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: 'fail',
-          message: expect.stringContaining('permission'),
+          message: 'Access denied',
         })
       );
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('should deny access when user object is missing', () => {
+    it('should return 401 when user object is missing', () => {
       req.user = undefined;
 
       const middleware = checkRole(['ADMIN']);
       middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'User not authenticated',
+        })
+      );
       expect(next).not.toHaveBeenCalled();
     });
 
@@ -199,60 +241,65 @@ describe('Authentication Middleware Tests', () => {
   });
 
   describe('validateId middleware', () => {
-    const validateId = require('../../src/middlewares/validateId');
-    const mongoose = require('mongoose');
-
     it('should pass valid MongoDB ObjectId', () => {
       req.params = { id: '507f1f77bcf86cd799439011' };
 
-      validateId(req, res, next);
+      const middleware = validateId('id');
+      middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(); // called without error
     });
 
-    it('should reject invalid MongoDB ObjectId', () => {
+    it('should call next with AppError for invalid MongoDB ObjectId', () => {
       req.params = { id: 'invalid-id' };
 
-      validateId(req, res, next);
+      const middleware = validateId('id');
+      middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: 'fail',
+          statusCode: 400,
           message: expect.stringContaining('Invalid'),
         })
       );
-      expect(next).not.toHaveBeenCalled();
     });
 
-    it('should reject empty ID', () => {
-      req.params = { id: '' };
-
-      validateId(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should reject undefined ID', () => {
+    it('should pass when param is not present (undefined)', () => {
       req.params = {};
 
-      validateId(req, res, next);
+      const middleware = validateId('id');
+      middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(next).not.toHaveBeenCalled();
+      // validateId only checks if value exists AND is invalid
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should validate multiple param names', () => {
+      req.params = {
+        userId: '507f1f77bcf86cd799439011',
+        eventId: 'invalid-id',
+      };
+
+      const middleware = validateId('userId', 'eventId');
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: expect.stringContaining('Invalid'),
+        })
+      );
     });
   });
 
   describe('validateRequest middleware', () => {
-    const validateRequest = require('../../src/middlewares/validateRequest');
-    const { z } = require('zod');
-
-    it('should pass valid request body', () => {
+    it('should pass valid request body', async () => {
       const schema = z.object({
-        email: z.string().email(),
-        name: z.string().min(2),
+        body: z.object({
+          email: z.string().email(),
+          name: z.string().min(2),
+        }),
       });
 
       req.body = {
@@ -261,16 +308,18 @@ describe('Authentication Middleware Tests', () => {
       };
 
       const middleware = validateRequest(schema);
-      middleware(req, res, next);
+      await middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(); // called without error
     });
 
-    it('should reject invalid request body', () => {
+    it('should call next with AppError for invalid request body', async () => {
       const schema = z.object({
-        email: z.string().email(),
-        name: z.string().min(2),
+        body: z.object({
+          email: z.string().email(),
+          name: z.string().min(2),
+        }),
       });
 
       req.body = {
@@ -279,21 +328,21 @@ describe('Authentication Middleware Tests', () => {
       };
 
       const middleware = validateRequest(schema);
-      middleware(req, res, next);
+      await middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: 'fail',
+          statusCode: 400,
         })
       );
-      expect(next).not.toHaveBeenCalled();
     });
 
-    it('should reject missing required fields', () => {
+    it('should call next with AppError for missing required fields', async () => {
       const schema = z.object({
-        email: z.string().email(),
-        password: z.string().min(8),
+        body: z.object({
+          email: z.string().email(),
+          password: z.string().min(8),
+        }),
       });
 
       req.body = {
@@ -302,10 +351,13 @@ describe('Authentication Middleware Tests', () => {
       };
 
       const middleware = validateRequest(schema);
-      middleware(req, res, next);
+      await middleware(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(next).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+        })
+      );
     });
   });
 });

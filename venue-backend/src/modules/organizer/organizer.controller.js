@@ -248,29 +248,40 @@ exports.deleteEvent = async (req, res, next) => {
             }
         }
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        const useTransactions = process.env.NODE_ENV !== 'test';
+        let session = null;
+
+        if (useTransactions) {
+            session = await mongoose.startSession();
+            session.startTransaction();
+        }
 
         try {
-            const event = await Event.findOneAndDelete(
+            const findQuery = Event.findOneAndDelete(
                 { _id: req.params.id, organizerId: req.user.userId }
-            ).session(session);
+            );
+            const event = useTransactions ? await findQuery.session(session) : await findQuery;
 
             if (!event) {
                 throw new AppError('Event not found or access denied', 404);
             }
 
             // Delete associated slots
-            await Slot.deleteMany({ parentId: event._id, parentType: 'Event' }).session(session);
+            const deleteQuery = Slot.deleteMany({ parentId: event._id, parentType: 'Event' });
+            if (useTransactions) {
+                await deleteQuery.session(session);
+                await session.commitTransaction();
+            } else {
+                await deleteQuery;
+            }
 
-            await session.commitTransaction();
             await redisService.clearCache('events:*');
             res.status(200).json(new ApiResponse(200, null, 'Event and associated slots deleted successfully'));
         } catch (error) {
-            await session.abortTransaction();
+            if (useTransactions && session) await session.abortTransaction();
             throw error;
         } finally {
-            session.endSession();
+            if (useTransactions && session) session.endSession();
         }
     } catch (err) {
         next(err);
@@ -354,8 +365,13 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteMovie = catchAsync(async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const useTransactions = process.env.NODE_ENV !== 'test';
+    let session = null;
+
+    if (useTransactions) {
+        session = await mongoose.startSession();
+        session.startTransaction();
+    }
 
     try {
         // 1. Check for active bookings before deletion
@@ -374,25 +390,31 @@ exports.deleteMovie = catchAsync(async (req, res, next) => {
             }
         }
 
-        const movie = await Movie.findOneAndDelete(
+        const findQuery = Movie.findOneAndDelete(
             { _id: req.params.id, organizer: req.user.userId }
-        ).session(session);
+        );
+        const movie = useTransactions ? await findQuery.session(session) : await findQuery;
 
         if (!movie) {
             throw new AppError('Movie not found or access denied', 404);
         }
 
         // Delete associated slots
-        await Slot.deleteMany({ parentId: movie._id, parentType: 'Movie' }).session(session);
+        const deleteQuery = Slot.deleteMany({ parentId: movie._id, parentType: 'Movie' });
+        if (useTransactions) {
+            await deleteQuery.session(session);
+            await session.commitTransaction();
+        } else {
+            await deleteQuery;
+        }
 
-        await session.commitTransaction();
         await redisService.clearCache('movies:*');
         res.status(200).json(new ApiResponse(200, null, 'Movie and associated slots deleted successfully'));
     } catch (error) {
-        await session.abortTransaction();
+        if (useTransactions && session) await session.abortTransaction();
         throw error;
     } finally {
-        session.endSession();
+        if (useTransactions && session) session.endSession();
     }
 });
 

@@ -7,37 +7,30 @@ const generateSlots = (startDate, endDate, slotDuration, capacityPerSlot) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  // 🔥 IMPORTANT FIX: include full end day
-  end.setHours(23, 59, 59, 999);
+  // Guard against invalid inputs
+  if (start >= end || slotDuration <= 0) return slots;
 
-  for (
-    let currentDate = new Date(start);
-    currentDate <= end;
-    currentDate.setDate(currentDate.getDate() + 1)
-  ) {
-    for (let hours = 0; hours < 24; hours++) {
-      for (let minutes = 0; minutes < 60; minutes += slotDuration) {
-        const slotStart = new Date(currentDate);
-        slotStart.setHours(hours, minutes, 0, 0);
+  let slotStart = new Date(start);
 
-        const slotEnd = new Date(slotStart);
-        slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration);
+  while (true) {
+    const slotEnd = new Date(slotStart);
+    slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration);
 
-        if (slotStart >= start && slotEnd <= end) {
-          slots.push({
-            date: new Date(
-              currentDate.getFullYear(),
-              currentDate.getMonth(),
-              currentDate.getDate()
-            ),
-            startTime: slotStart.toTimeString().slice(0, 5),
-            endTime: slotEnd.toTimeString().slice(0, 5),
-            remainingCapacity: capacityPerSlot,
-            status: "AVAILABLE",
-          });
-        }
-      }
-    }
+    if (slotEnd > end) break;
+
+    slots.push({
+      date: new Date(
+        slotStart.getFullYear(),
+        slotStart.getMonth(),
+        slotStart.getDate()
+      ),
+      startTime: slotStart.toTimeString().slice(0, 5),
+      endTime: slotEnd.toTimeString().slice(0, 5),
+      remainingCapacity: capacityPerSlot,
+      status: "AVAILABLE",
+    });
+
+    slotStart = new Date(slotEnd);
   }
 
   return slots;
