@@ -4,7 +4,7 @@ const verifyToken = require('../../middlewares/verifyToken');
 const checkRole = require('../../middlewares/checkRole');
 
 const router = express.Router();
-const cacheMiddleware = require('../../middlewares/cache.middleware');
+
 
 // Get all events
 /**
@@ -29,8 +29,7 @@ const cacheMiddleware = require('../../middlewares/cache.middleware');
  *             schema:
  *               $ref: '#/components/schemas/ApiResponse_Array_Event'
  */
-// Cache for 60 seconds
-router.get('/', cacheMiddleware(60), getEvents);
+router.get('/', getEvents);
 
 // Get organizer's own events
 /**
@@ -160,8 +159,7 @@ const validateId = require('../../middlewares/validateId');
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Cache for 60 seconds
-router.get('/:id', validateId('id'), cacheMiddleware(60), getEventById);
+router.get('/:id', validateId('id'), getEventById);
 
 // Get slots for an event
 /**
