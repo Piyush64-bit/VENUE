@@ -4,7 +4,7 @@ const verifyToken = require('../../middlewares/verifyToken');
 const checkRole = require('../../middlewares/checkRole');
 
 const router = express.Router();
-const cacheMiddleware = require('../../middlewares/cache.middleware');
+
 
 // Get all movies (Public)
 /**
@@ -29,8 +29,7 @@ const cacheMiddleware = require('../../middlewares/cache.middleware');
  *             schema:
  *               $ref: '#/components/schemas/ApiResponse_Array_Movie'
  */
-// Cache for 60 seconds
-router.get('/', cacheMiddleware(60), getMovies);
+router.get('/', getMovies);
 
 // Create a new movie (Admin/Organizer only)
 /**
@@ -122,8 +121,7 @@ router.post('/', verifyToken, checkRole(['ADMIN', 'ORGANIZER']), createMovie);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Cache for 60 seconds
-router.get('/:id', cacheMiddleware(60), getMovieById);
+router.get('/:id', getMovieById);
 
 // Get movie slots
 /**
